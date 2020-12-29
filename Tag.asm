@@ -57,7 +57,11 @@ jmp finish
 up:
 cmp player1_y,00h
 je finish
-dec player1_y
+
+;dec player1_y
+;call delay
+;inc player1_y
+;inc player1_y
 jmp finish
 down:
 cmp player1_y,0B7h
@@ -76,6 +80,16 @@ dec player1_x
 finish:
 ret
 move endp
+
+;DELAY 500000 (7A120h).
+delay proc   
+  mov cx, 7      ;HIGH WORD.
+  mov dx, 0A120h ;LOW WORD.
+  mov ah, 86h    ;WAIT.
+  int 15h
+  ret
+delay endp 
+
 main proc far             
 mov ax,@data
 mov ds,ax      
