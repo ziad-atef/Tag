@@ -30,7 +30,8 @@ main proc far
   
 	;TIMER (1 SECOND).
 	              cmp  dh, secondToCompare
-	              je   display_time       	;keeps repeating the loop until a change has occured, now it is known that a second has actually passed
+	              je   display_time       	;keeps repeating the loop until a change has occured,
+				  							;now it is known that a second has actually passed
 	              mov  secondToCompare, dh
 
 	; bh will be used as a temp reg for round time if rount time is reached the loop stops
