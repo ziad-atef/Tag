@@ -81,6 +81,24 @@ ENDM checkDifference
 
     
 .code
+
+printTimeMid proc
+				
+			;move cursor to top middle of the screen to print the time
+						mov  ah,2
+						mov  dx,0013h
+						int  10h
+		
+		
+			; display time as a string
+						mov  ah, 9
+						lea  dx, secondsBuffer
+						int  21h
+
+						ret
+
+printTimeMid endp
+
 drawLevel1 proc
 	              MOV          SI,0000h                                                        	;used as an iterator to reference points in Xpoints,Ypoints Pheights, Pwidths
 	              MOV          DI,0000h                                                        	;used as an iterator with half the value of SI because colors array is a Byte not a word so we will need to iterate over half the value
@@ -254,16 +272,7 @@ main proc far
 				  							;tried moving the previous three lines inside proc number2string but failed
 	              call number2string		
 
-	;move cursor to top middle of the screen to print the time
-	              mov  ah,2
-	              mov  dx,0013h
-	              int  10h
-  
-  
-	; display time as a string
-	              mov  ah, 9
-	              lea  dx, secondsBuffer
-	              int  21h
+				  
 
 	time:        
 	             mov  ah,2ch
@@ -273,11 +282,13 @@ main proc far
 	             mov  oldTime,dl
 	             call move
 	             call draw_player1
-
+				 call printTimeMid	;time
+									;time is printed after player is drawn to avoid flickering
 				jmp  display_time
 
 	            ;jmp  time
 
+	;time
 	;write code here for when the roundTime is finished
 				 exitLoop:
 	             hlt
