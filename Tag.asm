@@ -1,30 +1,36 @@
-;macros necessary for drawing level 1
-drawPlatform macro x, y, color, height, width ;x, y are the starting position (top left corner)
-    local whilePlatformBeingDrawn
-    mov cx,x                        
-    mov dx,y                                
-    whilePlatformBeingDrawn:
-        drawPixel_withoutXY color
-        inc cx ;the x-coordinate
-        checkDifference cx, x, width ;Keep adding Pixels till Cx-P_x=widthPlatform
-        JNG whilePlatformBeingDrawn 
-        mov cx, x
-        inc dx
-        checkDifference dx, y, height
-    JNG whilePlatformBeingDrawn
-endm drawPlatform
+;I,cheesecake, have included and might include macros at the beginning of the code to easily use in visual code
+;I recommend using lots of macros and procs since they make the job a lot more modular and easier
+;Credit goes to Essam for his well-thought-of advice
 
-graphicsMode macro Mode  ;https://stanislavs.org/helppc/int_10.html click on set video modes for all modes
-    mov ah,00h
-    mov al,Mode
-    int 10h
-ENDM graphicsMode
+    drawPlatform macro x, y, color, height, width ;x, y are the starting position (top left corner)
+       local whilePlatformBeingDrawn
+        mov cx,x                        
+        mov dx,y                                
+        whilePlatformBeingDrawn:
+            drawPixel_withoutXY color
+            inc cx ;the x-coordinate
+            checkDifference cx, x, width ;Keep adding Pixels till Cx-P_x=widthPlatform
+         JNG whilePlatformBeingDrawn 
+            mov cx, x
+            inc dx
+            checkDifference dx, y, height
+        JNG whilePlatformBeingDrawn
+    endm drawPlatform
+
+
+; graphicsMode macro Mode  ;https://stanislavs.org/helppc/int_10.html click on set video modes for all modes
+;     mov ah,00h
+;     mov al,Mode
+;     int 10h
+; ENDM graphicsMode
+
 
 drawPixel_withoutXY macro color ;Assumes that spatial parameters are already initialized.
     mov ah,0ch
     mov al,color
     int 10h
 ENDM drawPixel_withoutXY
+
 
 drawPixel macro color, row, column
     mov ah,0ch
@@ -35,12 +41,16 @@ drawPixel macro color, row, column
     int 10h
 ENDM drawPixel
 
+; return macro
+;     int 20h
+; ENDM return
+
 colorScreen macro color
-	mov ah,06       ;Scroll (Zero lines anyway)
-    mov al,00h      ;to blank the screen
-	mov bh,color    ;color to blank the screen with
-	mov cx,0000h    ;start from row 0, column 0
-	mov dx,184fh    ;to the end of the screen
+	mov ah,06 ;Scroll (Zero lines anyway)
+    mov al,00h ;to blank the screen
+	mov bh,color  ;color to blank the screen with
+	mov cx,0000h  ;start from row 0, column 0
+	mov dx,184fh ;to the end of the screen
 	int 10h
 ENDM colorScreen
 
@@ -52,14 +62,21 @@ push ax
 pop ax
 ENDM checkDifference
 
-.model small
+.model huge
 .stack 64
 .data
-	oldTime      db 0
-	player1_x    dw 0Ah
-	player1_y    dw 0Ah
-	player1_size dw 10h
 
+player1_x dw 0Ah
+player1_y dw 0Ah
+player1_size dw 7h
+moveSpeed dw 9h
+jumpSpeed dw 5h
+fallSpeed dw 1h
+oldTime db 0
+JumpState db 0
+FallState db 1
+JumpPos dw ?
+platformsCount DW 8 ;a variable to include the number of platforms in order to use in loops to reference in macros
 
 	;cheesecake 
 	;variables for the timer
@@ -69,19 +86,37 @@ ENDM checkDifference
 	curSec          db 0        	;a variable that has the current value to be printed
 	roundTime       db 60       	;sets the time the user wants to end the round at
 
-	platformsCount DW 8      ;a variable to include the number of platforms in order to use in loops to reference in macros
+; the following arrays contain the x,y,color,width,and height of all platforms
+; the number of elements in each array is platformsCount
+Xpoints  DW     0,95,10,220,95,10,220,95
+Ypoints  DW     190,160,130,130,100,70,70,35
+Pcolors  DB     10,200,200,200,200,200,200,200
+Pwidths  DW     320,120,80,80,120,80,80,120
+Pheights DW     10,3,3,3,3,3,3,3
 
-	; the following arrays contain the x,y,color,width,and height of all platforms
-	; the number of elements in each array is platformsCount
-	Xpoints        DW 0,95,10,220,95,10,220,95
-	Ypoints        DW 190,160,130,130,100,70,70,35
-	Pcolors        DB 10,200,200,200,200,200,200,200
-	Pwidths        DW 320,120,80,80,120,80,80,120
-	Pheights       DW 10,3,3,3,3,3,3,3
 
-    
-.code
-;time
+;First Platform
+P1_x  dw  160 ;x
+P1_y  dw  100 ;y
+P1_c db 60 ;color
+P1_w dw 50 ;width
+P1_h dw 5 ;height
+
+;Second Platform (Ground)
+P2_x  dw  0 ;x
+P2_y  dw  190 ;y
+P2_c db 10 ;color
+P2_w dw 320 ;width
+P2_h dw 10 ;height
+
+;Third Platform
+P3_x  dw  70 ;x
+P3_y  dw  20 ;y
+P3_c db 15 ;color
+P3_w dw 80 ;width
+P3_h dw 5 ;height
+
+.code     
 printTimeMid proc
 				
 			;move cursor to top middle of the screen to print the time
@@ -98,96 +133,6 @@ printTimeMid proc
 						ret
 
 printTimeMid endp
-
-drawLevel1 proc
-	              MOV          SI,0000h                                                        	;used as an iterator to reference points in Xpoints,Ypoints Pheights, Pwidths
-	              MOV          DI,0000h                                                        	;used as an iterator with half the value of SI because colors array is a Byte not a word so we will need to iterate over half the value
-	              MOV          BX,platformsCount
-	              ADD          BX,BX
-	DrawPlatforms:
-	              drawPlatform Xpoints[SI], Ypoints[SI], Pcolors[DI], Pheights[SI], Pwidths[SI]
-	              inc          DI
-	              add          SI,2
-	              CMP          SI,BX
-	              JNZ          DrawPlatforms
-
-	              ret
-drawLevel1 endp
-
-
-draw_player1 proc
-
-	             ;mov  ah,00h
-	             ;mov  al,13h
-	             ;int  10h
-
-	            ;  mov  ah,0Bh
-	            ;  mov  bh,00h
-	            ;  mov  bl,00h
-	            ;  int  10h
-
-				colorScreen  53
-
-	        	 call         drawLevel1
-
-	             mov  cx,player1_x
-	             mov  dx,player1_y
-
-	draw:        
-	             mov  ah,0ch
-	             mov  al,0fh
-	             mov  bh,00h
-	             int  10h
-	             inc  cx
-	             mov  ax,cx
-	             sub  ax,player1_x
-	             cmp  ax,player1_size
-	             jng  draw
-	             mov  cx,player1_x
-	             inc  dx
-	             mov  ax,dx
-	             sub  ax,player1_y
-	             cmp  ax,player1_size
-	             jng  draw
-	             ret
-draw_player1 endp
-
-move proc
-
-	             mov  ah,00h
-	             int  16h
-	             cmp  ah,48h
-	             je   up
-	             cmp  ah,50h
-	             je   down
-	             cmp  ah,4Dh
-	             je   right
-	             cmp  ah,4Bh
-	             je   left
-	             jmp  finish
-	up:          
-	             cmp  player1_y,00h
-	             je   finish
-	             dec  player1_y
-	             jmp  finish
-	down:        
-	             cmp  player1_y,0B7h
-	             je   finish
-	             inc  player1_y
-	             jmp  finish
-	right:       
-	             cmp  player1_x,130h
-	             je   finish
-	             inc  player1_x
-	             jmp  finish
-	left:        
-	             cmp  player1_x,00h
-	             je   finish
-	             dec  player1_x
-	finish:      
-	             ret
-move endp
-
 ;time conversion to string not that important
 number2string proc near
 	;FILL BUF WITH DOLLARS.
@@ -232,21 +177,153 @@ dollars proc near
 	              ret
 dollars endp
 
-main proc far
-	             mov  ax,@data
-	             mov  ds,ax
+drawLevel1  proc
+    colorScreen 80
+    MOV SI,0000h    ;used as an iterator to reference points in Xpoints,Ypoints Pheights, Pwidths
+    MOV DI,0000h    ;used as an iterator with half the value of SI because colors array is a Byte not a word so we will need to iterate over half the value
+    MOV BX,platformsCount
+    ADD BX,BX
+    DrawPlatforms:
+        drawPlatform Xpoints[SI], Ypoints[SI], Pcolors[DI], Pheights[SI], Pwidths[SI]
+        add DI,1
+        add SI,2
+        CMP SI,BX
+        JNZ DrawPlatforms
 
-	             mov  ah,00h
-	             mov  al,13h
-	             int  10h
+drawLevel1 endp
 
-	             mov  ah,0Bh
-	             mov  bh,00h
-	             mov  bl,00h
-	             int  10h
+draw_player1 proc
+    mov cx,player1_x
+    mov dx,player1_y 
+    draw:
+    mov ah,0ch
+    mov al,0fh
+    mov bh,00h
+    int 10h
+    inc cx
+    mov ax,cx
+    sub ax,player1_x
+    cmp ax,player1_size
+    jng draw
+    mov cx,player1_x
+    inc dx
+    mov ax,dx
+    sub ax,player1_y
+    cmp ax,player1_size
+    jng draw
+    ret
+draw_player1 endp
 
+move proc
+mov  ah,01h
+int  16h
+jz Ascend
 
-	;time			 
+mov ah,00h
+int 16h
+
+cmp ah,4Dh
+je right
+cmp ah,4Bh
+je left
+cmp ah,48h
+je up
+jmp finish
+right:
+cmp player1_x,312d
+je Ascend
+mov bx,player1_x
+add bx,moveSpeed
+mov player1_x,bx
+jmp Ascend
+left:
+cmp player1_x,00h
+je Ascend
+mov bx,player1_x
+sub bx,moveSpeed
+mov player1_x,bx
+jmp Ascend
+up:
+cmp FallState,01h
+je Descend
+mov JumpState,1h
+mov bx,player1_y
+sub bx,40d
+mov JumpPos,bx
+
+Ascend:
+cmp JumpState,0h
+je  Descend
+mov bx,player1_y
+sub bx,jumpSpeed
+mov player1_y,bx
+cmp bx,JumpPos
+jg Descend
+mov JumpState,00h
+mov FallState,01h
+
+Descend:       ;190,160,130,130,100,70,70,35
+cmp player1_y,27d
+je platform1
+cmp player1_y,62d
+je platform2
+cmp player1_y,152d
+je platform1
+cmp player1_y,122d
+je platform2
+cmp player1_y,92d
+je platform1
+cmp player1_y,182d
+je ground
+fall:
+cmp FallState,0h
+je finish
+mov bx,player1_y
+add bx,fallSpeed
+mov player1_y,bx
+ret
+
+platform1:
+mov FallState,1h
+cmp player1_x,87d
+jl fall
+cmp player1_x,215d 
+jg fall
+jmp ground
+
+platform2:
+mov FallState,01h
+cmp player1_x,02d
+jl fall
+cmp player1_x,300d
+jg fall
+cmp player1_x,90d
+jl ground
+cmp player1_x,220d
+jl fall
+mov FallState,0h
+
+ground:
+mov FallState,0h
+ret
+
+finish:
+ret
+move endp
+
+main proc far             
+    mov ax,@data
+    mov ds,ax      
+
+    mov ah,00h
+    mov al,13h
+    int 10h
+
+    mov ah,0Bh
+    mov bh,00h
+    mov bl,00h
+    int 10h
+;time			 
 	display_time: 
 	;gets the current system time
 	              mov  ah, 2ch
@@ -274,25 +351,22 @@ main proc far
 
 				  
 
-	time:        
-	             mov  ah,2ch
-	             int  21h
-	             cmp  dl,oldTime
-	             je   time
-	             mov  oldTime,dl
-	             call move
-	             call draw_player1
-				 call printTimeMid	;time
+    time:
+        
+        mov ah,2ch
+        int 21h
+        cmp dl,oldTime
+        je time
+        mov oldTime,dl
+        call move
+        call draw_player1
+        call drawLevel1
+        call printTimeMid	;time
 									;time is printed after player is drawn to avoid flickering
 				jmp  display_time
-
-	            ;jmp  time
-
-	;time
-	;write code here for when the roundTime is finished
-				 exitLoop:
-	             hlt
-main endp
+                exitLoop:
+    hlt 
+main endp 
 
 end main 
 
