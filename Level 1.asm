@@ -17,11 +17,11 @@ drawPlatform macro x, y, color, height, width ;x, y are the starting position (t
     JNG whilePlatformBeingDrawn
 endm drawPlatform
 
-; graphicsMode macro Mode  ;https://stanislavs.org/helppc/int_10.html click on set video modes for all modes
-;     mov ah,00h
-;     mov al,Mode
-;     int 10h
-; ENDM graphicsMode
+graphicsMode macro Mode  ;https://stanislavs.org/helppc/int_10.html click on set video modes for all modes
+    mov ah,00h
+    mov al,Mode
+    int 10h
+ENDM graphicsMode
 
 drawPixel_withoutXY macro color ;Assumes that spatial parameters are already initialized.
     mov ah,0ch
@@ -68,43 +68,22 @@ ENDM checkDifference
 	Pwidths        DW 320,120,80,80,120,80,80,120
 	Pheights       DW 10,3,3,3,3,3,3,3
 
-	;First Platform
-	P1_x           dw 160                           	;x
-	P1_y           dw 100                           	;y
-	P1_c           db 60                            	;color
-	P1_w           dw 50                            	;width
-	P1_h           dw 5                             	;height
-
-	;Second Platform (Ground)
-	P2_x           dw 0                             	;x
-	P2_y           dw 190                           	;y
-	P2_c           db 10                            	;color
-	P2_w           dw 320                           	;width
-	P2_h           dw 10                            	;height
-
-	;Third Platform
-	P3_x           dw 70                            	;x
-	P3_y           dw 20                            	;y
-	P3_c           db 15                            	;color
-	P3_w           dw 80                            	;width
-	P3_h           dw 5                             	;height
-
 .code
 main proc far
 	              mov          ax,@data
 	              mov          ds,ax
 
-	              MOV          AH,0
-	              MOV          AL,13h
-	              int          10h
+	              graphicsMode 13h                                                             	;Graphics mode 320x200
+	              
+	              colorScreen  53
 
 	              call         drawLevel1
 	              int          20h
+				  
 main endp
 	;Procedures go here.
 
 drawLevel1 proc
-	              colorScreen  80
 	              MOV          SI,0000h                                                        	;used as an iterator to reference points in Xpoints,Ypoints Pheights, Pwidths
 	              MOV          DI,0000h                                                        	;used as an iterator with half the value of SI because colors array is a Byte not a word so we will need to iterate over half the value
 	              MOV          BX,platformsCount
@@ -116,6 +95,7 @@ drawLevel1 proc
 	              CMP          SI,BX
 	              JNZ          DrawPlatforms
 
+	              ret
 drawLevel1 endp
 
 end main      
