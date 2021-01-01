@@ -81,7 +81,7 @@ ENDM checkDifference
 
     
 .code
-
+;time
 printTimeMid proc
 				
 			;move cursor to top middle of the screen to print the time
