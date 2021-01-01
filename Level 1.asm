@@ -17,20 +17,17 @@ drawPlatform macro x, y, color, height, width ;x, y are the starting position (t
     JNG whilePlatformBeingDrawn
 endm drawPlatform
 
-
 ; graphicsMode macro Mode  ;https://stanislavs.org/helppc/int_10.html click on set video modes for all modes
 ;     mov ah,00h
 ;     mov al,Mode
 ;     int 10h
 ; ENDM graphicsMode
 
-
 drawPixel_withoutXY macro color ;Assumes that spatial parameters are already initialized.
     mov ah,0ch
     mov al,color
     int 10h
 ENDM drawPixel_withoutXY
-
 
 drawPixel macro color, row, column
     mov ah,0ch
