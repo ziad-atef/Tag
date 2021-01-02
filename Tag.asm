@@ -66,16 +66,21 @@ ENDM checkDifference
 .stack 64
 .data
 
-player1_x dw 0Ah
-player1_y dw 0Ah
-player1_size dw 7h
-moveSpeed dw 9h
-jumpSpeed dw 5h
-fallSpeed dw 1h
+player1_x dw 00d
+player1_y dw 182d
+player_size dw 7d
+player2_x dw 50d
+player2_y dw 50d
+moveSpeed dw 8d
+jumpSpeed dw 5d
+fallSpeed dw 1d
 oldTime db 0
 JumpState db 0
+JumpState2 db 0
 FallState db 1
+FallState2 db 1
 JumpPos dw ?
+JumpPos2 dw ?
 platformsCount DW 8 ;a variable to include the number of platforms in order to use in loops to reference in macros
 
 	;cheesecake 
@@ -189,7 +194,7 @@ drawLevel1  proc
         add SI,2
         CMP SI,BX
         JNZ DrawPlatforms
-
+    ret
 drawLevel1 endp
 
 draw_player1 proc
@@ -203,18 +208,40 @@ draw_player1 proc
     inc cx
     mov ax,cx
     sub ax,player1_x
-    cmp ax,player1_size
+    cmp ax,player_size
     jng draw
     mov cx,player1_x
     inc dx
     mov ax,dx
     sub ax,player1_y
-    cmp ax,player1_size
+    cmp ax,player_size
     jng draw
     ret
 draw_player1 endp
 
-move proc
+draw_player2 proc
+    mov cx,player2_x
+    mov dx,player2_y 
+    draw1:
+    mov ah,0ch
+    mov al,00h
+    mov bh,00h
+    int 10h
+    inc cx
+    mov ax,cx
+    sub ax,player2_x
+    cmp ax,player_size
+    jng draw1
+    mov cx,player2_x
+    inc dx
+    mov ax,dx
+    sub ax,player2_y
+    cmp ax,player_size
+    jng draw1
+    ret
+draw_player2 endp
+
+player1move proc
 mov  ah,01h
 int  16h
 jz Ascend
@@ -309,7 +336,37 @@ ret
 
 finish:
 ret
-move endp
+player1move endp
+
+player2move proc
+    mov  ah,01h
+    int  16h
+    jz end
+
+    mov ah,00h
+    int 16h
+
+    cmp al,44h
+    je D
+    cmp al,64h
+    je D
+    cmp al,41h
+    je A
+    cmp al,61h
+    je A
+    ret
+    A:
+    mov bx,player2_x
+    sub bx,moveSpeed
+    mov player2_x,bx
+    ret
+    D:
+    mov bx,player2_x
+    add bx,moveSpeed
+    mov player2_x,bx
+    end:
+    ret
+player2move endp
 
 main proc far             
     mov ax,@data
@@ -326,28 +383,28 @@ main proc far
 ;time			 
 	display_time: 
 	;gets the current system time
-	              mov  ah, 2ch
-	              int  21h                	;seconds return in dh
+	mov  ah, 2ch
+	int  21h                	;seconds return in dh
 
 	;TIMER (1 SECOND).
-	              cmp  dh, secondToCompare	;time
-	              je   time       	;keeps repeating the loop until a change has occured, now it is known that a second has actually passed
+	cmp  dh, secondToCompare	;time
+	je   time       	;keeps repeating the loop until a change has occured, now it is known that a second has actually passed
 				  					;cheesecake: the loop is supposed to go back to label display_time 
 									;but i changed it to go to label time so that the code flows normally
-	              mov  secondToCompare, dh
+	mov  secondToCompare, dh
 
 	; bh will be used as a temp reg for round time if rount time is reached the loop stops
-	              mov  bh,roundTime	;time
-	              add  curSec,1
-	              cmp  curSec,bh
-	              jz   exitLoop
+	mov  bh,roundTime	;time
+	add  curSec,1
+    cmp  curSec,bh
+    jz   exitLoop
 
 	;converting seconds value to string, this is a more general code for the one in sheetIII
-	              xor  ax, ax             	;will hold the value of the number to be converted to string
-	              mov  al, curSec         	;seconds are moved to al
-	              lea  si, secondsBuffer  	;variable where the string will be stored
+	xor  ax, ax             	;will hold the value of the number to be converted to string
+	mov  al, curSec         	;seconds are moved to al
+	lea  si, secondsBuffer  	;variable where the string will be stored
 				  							;tried moving the previous three lines inside proc number2string but failed
-	              call number2string		
+	call number2string		
 
 				  
 
@@ -358,13 +415,15 @@ main proc far
         cmp dl,oldTime
         je time
         mov oldTime,dl
-        call move
-        call draw_player1
+        call player1move
+        call player2move
         call drawLevel1
+        call draw_player1
+        call draw_player2
         call printTimeMid	;time
-									;time is printed after player is drawn to avoid flickering
-				jmp  display_time
-                exitLoop:
+							;time is printed after player is drawn to avoid flickering
+		jmp  display_time
+        exitLoop:
     hlt 
 main endp 
 
