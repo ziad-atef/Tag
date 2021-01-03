@@ -1,6 +1,4 @@
 ;-------------------------------------------------------------Drawing level 1 macros---------------------------------------------------------------------------
-
-
 drawRectangle macro x, y, color, height, width ;x, y are the starting position (top left corner)
     local whilePlatformBeingDrawn
     mov cx,x                        
@@ -263,10 +261,12 @@ main proc far
 					mov collisionRunning,0
 
     time:
+    
     call drawLevel1
     call draw_player1
     call draw_player2
     call printTimeMid 
+    call writePlayerNames
 
     mov ah,2ch
     int 21h
@@ -914,7 +914,7 @@ draw_player1 proc
     mov dx,player1_y 
     draw:
     mov ah,0ch
-    mov al,0fh
+    mov al,06h  ; color of player 1 is brown
     mov bh,00h
     int 10h
     inc cx
@@ -949,7 +949,7 @@ draw_player2 proc
     mov dx,player2_y 
     draw1:
     mov ah,0ch
-    mov al,0fh
+    mov al,09h  ;color of player 2 is blue
     mov bh,00h
     int 10h
     inc cx
@@ -1247,5 +1247,59 @@ checkCollision proc
 	exit:          
 	               ret
 checkCollision endp
+
+writePlayerNames proc
+    
+    pusha
+
+	mov  ah,2
+	mov  dx,0000h
+	    ;move cursor to beginning of the screeen
+
+    mov SI, offset PLAYER1NAME+2
+    
+writePlayer1:
+    int 10h
+    mov al,[SI]
+    cmp al,13
+    je player2cursor ;checks if the current char is a dollar sign, if not continue printing the name
+
+    mov  ah, 9
+    mov  bh, 0
+    mov  bl, 06h  ;brown
+    mov  cx, 1  
+    int  10h
+    add SI,1
+    add dl,1
+    mov ah,2
+    jmp writeplayer1
+
+player2cursor:
+    mov  ah,2
+	mov  dx,0022h
+	    ;move cursor to right of the screeen
+    mov SI,offset PLAYER2NAME+2    
+
+writePlayer2:   
+    int 10h
+    
+    mov al,[SI]
+    cmp al,13
+    je done
+    mov  ah, 9
+    mov  bh, 0
+    mov  bl, 09h  ;blue
+    mov  cx, 1  
+    int  10h
+    add SI,1
+    add dl,1
+    mov ah,2
+    jmp writePlayer2
+
+
+done: popa
+ret
+writePlayerNames endp
+
 ;================================================================================================================================================================
 end main 
