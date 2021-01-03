@@ -99,7 +99,7 @@ ENDM checkDifference
 	compareTemp          db ?                             	; a variable which holds the current second at any moment,
 	; this is used in order to detect if a second has actually passed or not
 	secondsBuffer        db 6 dup (?)                     	; an array to hold the ascii code of seconds to be printed
-	curSec               db 60                            	;a variable that has the current value to be printed
+	curSec               db 60                       	;a variable that has the current value to be printed
 	roundTime            db -1d                           	;sets the time the user wants to end the round at
 
 	collisionTimer       db 0                             	;cur value of the change timer when a collision occurs
@@ -107,26 +107,6 @@ ENDM checkDifference
 	collisionCompareTemp db ?
 	collisionRunning     db 0                             	; a variable to keep track of whether the collision timer is already running
 
-    ;First Platform
-    P1_x  dw  160 ;x
-    P1_y  dw  100 ;y
-    P1_c db 60 ;color
-    P1_w dw 50 ;width
-    P1_h dw 5 ;height
-
-    ;Second Platform (Ground)
-    P2_x  dw  0 ;x
-    P2_y  dw  190 ;y
-    P2_c db 10 ;color
-    P2_w dw 320 ;width
-    P2_h dw 10 ;height
-
-    ;Third Platform
-    P3_x  dw  70 ;x
-    P3_y  dw  20 ;y
-    P3_c db 15 ;color
-    P3_w dw 80 ;width
-    P3_h dw 5 ;height
 
     MODE				DB		1					;1 is the mainscreen, 2 is chatting, 3 is game
     ;PLAYER1POS			DB		10 					;Y position of the top of  player 
@@ -136,6 +116,8 @@ ENDM checkDifference
 
     PLAYER1NAME			DB		15,?,15 DUP('$'),'$'
     PLAYER2NAME			DB		15,?,15 DUP('$'),'$'
+    P1winsText          DB      'PLAYER 1 WINS!!$'
+    P2winsText          DB      'PLAYER 2 WINS!!$'
 
     SERVING				DB		1					;0 is the no one serving, 1 is player 1 is serving, 2 is player 2
     ;player1score		db		30H					;scores are 0 ascii
@@ -283,10 +265,29 @@ main proc far
     
     jmp           display_time
 exitLoop:
-    mov ax,4c00h
-	int 21h
+
+        call drawLevel1
+
+        mov ah,2          		;Move Cursor to upper middle of screen
+		mov dx,0110h      		
+		int 10h 
+
+        cmp tag,0
+        je player2win
+        mov ah,9
+        mov dx,offset P1winsText
+        int 21h
+       jmp nameWritten
+
+player2win:
+    mov ah,9
+    mov dx,offset P2winsText
+    int 21h
+
+      ;mov ax,4c00h
+	  ;int 21h
     
-    hlt 
+ nameWritten:   int 20h 
 main endp 
 
 getusername proc
@@ -680,7 +681,7 @@ menuinput proc
 		
 		escape:
 		call outro
-
+ret
 menuinput endp
 
 outro proc					
@@ -694,6 +695,7 @@ outro proc
 		
 		mov ax,4c00h
 		int 21h
+        ret
 outro ENDP
 
 ;-------------------------------------------------------------------Moving player Procedures--------------------------------------------------------------------------------
