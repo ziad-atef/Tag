@@ -59,43 +59,49 @@ ENDM checkDifference
 .stack 64
 .data
 
-	tag             db 0                             	;indecator for the tag. 0 -> on player1, 1 -> on player2
-	player1_x       dw 00d
-	player1_y       dw 182d
-	player_size     dw 7d
-	player2_x       dw 50d
-	player2_y       dw 50d
-	p1_tag_x        dw 3d
-	p1_tag_y        dw 177d
-	p2_tag_x        dw 53d
-	p2_tag_y        dw 45d
-	moveSpeed       dw 8d
-	jumpSpeed       dw 5d
-	fallSpeed       dw 1d
-	oldTime         db 0
-	JumpState       db 0
-	JumpState2      db 0
-	FallState       db 1
-	FallState2      db 1
-	JumpPos         dw ?
-	JumpPos2        dw ?
-	platformsCount  DW 8                             	;a variable to include the number of platforms in order to use in loops to reference in macros
+	tag                  db 0                             	;indecator for the tag. 0 -> on player1, 1 -> on player2
+	player1_x            dw 00d
+	player1_y            dw 182d
+	player_size          dw 7d
+	player2_x            dw 50d
+	player2_y            dw 30d
+	p1_tag_x             dw 3d
+	p1_tag_y             dw 177d
+	p2_tag_x             dw 23d
+	p2_tag_y             dw 45d
+	moveSpeed            dw 8d
+	jumpSpeed            dw 5d
+	fallSpeed            dw 1d
+	oldTime              db 0
+	JumpState            db 0
+	JumpState2           db 0
+	FallState            db 1
+	FallState2           db 1
+	JumpPos              dw ?
+	JumpPos2             dw ?
+	platformsCount       DW 8                             	;a variable to include the number of platforms in order to use in loops to reference in macros
 
 	;cheesecake
 	;variables for the timer
-	secondToCompare db ?                             	; a variable which holds the current second at any moment,
+	compareTemp          db ?                             	; a variable which holds the current second at any moment,
 	; this is used in order to detect if a second has actually passed or not
-	secondsBuffer   db 6 dup (?)                     	; an array to hold the ascii code of seconds to be printed
-	curSec          db 60                            	;a variable that has the current value to be printed
-	roundTime       db -1d                           	;sets the time the user wants to end the round at
+	secondsBuffer        db 6 dup (?)                     	; an array to hold the ascii code of seconds to be printed
+	curSec               db 60                            	;a variable that has the current value to be printed
+	roundTime            db -1d                           	;sets the time the user wants to end the round at
+
+	collisionTimer       db 0                             	;cur value of the change timer when a collision occurs
+	curCollisionSec      db 4                             	;starts at the max value we want the collision timer to be, in our case it is 4
+	collisionCompareTemp db ?
+	collisionRunning     db 0                             	; a variable to keep track of whether the collision timer is already running
+
 
 	; the following arrays contain the x,y,color,width,and height of all platforms
 	; the number of elements in each array is platformsCount
-	Xpoints         DW 0,95,10,220,95,10,220,95
-	Ypoints         DW 190,160,130,130,100,70,70,35
-	Pcolors         DB 10,200,200,200,200,200,200,200
-	Pwidths         DW 320,120,80,80,120,80,80,120
-	Pheights        DW 10,3,3,3,3,3,3,3
+	Xpoints              DW 0,95,10,220,95,10,220,95
+	Ypoints              DW 190,160,130,130,100,70,70,35
+	Pcolors              DB 10,200,200,200,200,200,200,200
+	Pwidths              DW 320,120,80,80,120,80,80,120
+	Pheights             DW 10,3,3,3,3,3,3,3
 
 .code
 
@@ -389,7 +395,11 @@ checkCollision proc
 	               add           ax, player_size
 	               cmp           ax, player1_y
 	               JNG           exit
+
+	               cmp           collisionRunning,1                                              	;if the collision timer is already running keep the tag as it is
+	               jz            exit
 				   
+				   mov           collisionRunning,1
 	               cmp           tag, 0
 	               jz            tag_player2
 	               cmp           tag, 1
@@ -397,9 +407,11 @@ checkCollision proc
 				   
 	tag_player1:   
 	               mov           tag, 0
+				   mov           collisionRunning,1
 	               jmp           exit
 	tag_player2:   
 	               mov           tag, 1
+				   mov           collisionRunning,1
 	exit:          
 	               ret
 checkCollision endp
@@ -417,11 +429,11 @@ main proc far
 	               int           21h                                                             	;seconds return in dh
 
 	;TIMER (1 SECOND).
-	               cmp           dh, secondToCompare                                             	;time
+	               cmp           dh, compareTemp                                                 	;time
 	               je            time                                                            	;keeps repeating the loop until a change has occured, now it is known that a second has actually passed
 	;cheesecake: the loop is supposed to go back to label display_time
 	;but i changed it to go to label time so that the code flows normally
-	               mov           secondToCompare, dh
+	               mov           compareTemp, dh
 
 	; bh will be used as a temp reg for round time if rount time is reached the loop stops
 	               mov           bh,roundTime                                                    	;time
@@ -435,6 +447,29 @@ main proc far
 	               lea           si, secondsBuffer                                               	;variable where the string will be stored
 	;tried moving the previous three lines inside proc number2string but failed
 	               call          number2string
+				   
+	;code for the collision timer
+	               mov           ah, 2ch
+	               int           21h                                                             	;seconds return in dh
+					
+					
+	               cmp           dh, collisionCompareTemp
+	               je            time  ;keeps repeating the loop until a change has occured, 
+				   					   ;now it is known that a second has actually passed
+	               mov           collisionCompareTemp, dh ; if a second has passed move this current sec to the temp variable
+				   										  ; to keep comparing with the upcoming seconds
+	               
+
+	               mov           bh,collisionTimer		
+	               dec           curCollisionSec 
+	               cmp           curCollisionSec,bh		;if the collision timer has reached zero we want to reset the timer
+				   										;else keep going with the code
+	               jnz            time 
+				   ;if the colision timer reaches zero we will reset the timer
+
+				   mov curCollisionSec,4  ;this code block is responsible for resetting the timer
+					mov bh,0
+					mov collisionRunning,0
 
 	time:          
         
