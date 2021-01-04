@@ -108,6 +108,7 @@ ENDM checkDifference
 	collisionCompareTemp db ?
 	collisionRunning     db 0                                                    	; a variable to keep track of whether the collision timer is already running
 
+
 	MODE                 DB 1                                                    	;1 is the mainscreen, 2 is chatting, 3 is game
 	;PLAYER1POS			DB		10 					;Y position of the top of  player
 	;PLAYER2POS			DB		10 					;Y position of the top of  player
@@ -116,6 +117,8 @@ ENDM checkDifference
 
 	PLAYER1NAME          DB 15,?,15 DUP('$'),'$'
 	PLAYER2NAME          DB 15,?,15 DUP('$'),'$'
+	P1winsText           DB 'PLAYER 1 WINS!!$'
+	P2winsText           DB 'PLAYER 2 WINS!!$'
 
 	SERVING              DB 1                                                    	;0 is the no one serving, 1 is player 1 is serving, 2 is player 2
 	;player1score		db		30H					;scores are 0 ascii
@@ -139,7 +142,7 @@ ENDM checkDifference
 	;--------------------------------------------------------------------------------------;
 
 
-	;-----------------------------gamemode strings-----------------------------------------;
+	;---------------------------gamemode strings-----------------------------------------;
 	PAUSEDSTRING         DB 'Game is paused$'
 	PAUSEDSPACE          DB 'Press SPACE to continue ',01H,'$'
 	PAUSEDESCAPE         DB 'Press ESC to quit to main menu$'
@@ -158,12 +161,14 @@ ENDM checkDifference
 	MAINSCREEN7          DB 'PLEASE WAIT WHILE THE OTHER USER SELECTS THE LEVEL$'
 	;--------------------------------------------------------------------------------------;
 
-	;---------------------------------chat strings-----------------------------------------;
+	;---------------------------chat strings-----------------------------------------;
 	MAINSCREEN4          DB 'GAME$'
 	MAINSCREEN5          DB 'CHAT$'
 	MAINSCREEN6          DB '->To exit the game press ESC$'
 	CHATEXIT             DB 'TO EXIT CHAT PRESS EXIT$'
 	;--------------------------------------------------------------------------------------;
+
+
 
 	;the includes are here so that they can work with the datasegment
 	;INCLUDE GUI.INC									;contains some general purpose functions that could be used
@@ -261,10 +266,29 @@ main proc far
     
 	                      jmp           display_time
 	exitLoop:             
-	                      mov           ax,4c00h
+
+	                      call          drawLevel1
+
+	                      mov           ah,2                                                            	;Move Cursor to upper middle of screen
+	                      mov           dx,0110h
+	                      int           10h
+
+	                      cmp           tag,0
+	                      je            player2win
+	                      mov           ah,9
+	                      mov           dx,offset P1winsText
 	                      int           21h
+	                      jmp           nameWritten
+
+	player2win:           
+	                      mov           ah,9
+	                      mov           dx,offset P2winsText
+	                      int           21h
+
+	;mov ax,4c00h
+	;int 21h
     
-	                      hlt
+	nameWritten:          int           20h
 main endp
 
 getusername proc
@@ -656,7 +680,7 @@ menuinput proc
 		
 	escape:               
 	                      call          outro
-
+	                      ret
 menuinput endp
 
 outro proc
@@ -670,6 +694,7 @@ outro proc
 		
 	                      mov           ax,4c00h
 	                      int           21h
+	                      ret
 outro ENDP
 
 	;-------------------------------------------------------------------Moving player Procedures--------------------------------------------------------------------------------
