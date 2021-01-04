@@ -6,11 +6,11 @@ drawRectangle macro x, y, color, height, width ;x, y are the starting position (
     whilePlatformBeingDrawn:
         drawPixel_withoutXY color
         inc cx ;the x-coordinate
-        checkDifference cx, x, width ;Keep adding Pixels till Cx-P_x=widthPlatform
+        subtractAndCheck cx, x, width ;Keep adding Pixels till Cx-P_x=widthPlatform
         JNG whilePlatformBeingDrawn 
         mov cx, x
         inc dx
-        checkDifference dx, y, height
+        subtractAndCheck dx, y, height
     JNG whilePlatformBeingDrawn
 endm drawRectangle
 
@@ -44,28 +44,29 @@ colorScreen macro color
 	int 10h
 ENDM colorScreen
 
-checkDifference macro A,B,C ;checks if A-B=C and yields 0 if that's true
+subtractAndCheck macro A,B,C ;checks if A-B=C and returns 0 if that's true
 push ax
             mov ax,A
             sub ax,B
             cmp ax,C
 pop ax
-ENDM checkDifference
+ENDM subtractAndCheck
 .286
 .model small
 .stack 64
 .data
-    player1_x dw 00d
-    player1_y dw 182d
-    player_size dw 7d
-    player2_x dw 312d
-    player2_y dw 182d
-    oldTime db 0
+    player1_x dw 00d    ;initial x coordinate for player 1
+    player1_y dw 182d   ;initial y coordinate for player 1
+    player_size dw 7d   ;square area for both players
+    player2_x dw 312d   ;initial x coordinate for player 2
+    player2_y dw 182d   ;initial y coordinate for player 2
+    oldTime db 0        ; a temp variable to keep calculating time correctly 
+                        ;where each second is compared to the second preceding it
 
-    X1 db 0
-    Y1 db 2
-    X2 db 0
-    Y2 db 2
+    X1 db 0             ;current x coordinate of player 1   CHECK
+    Y1 db 2             ;current y coordinate of player 1
+    X2 db 0              ;current x coordinate of player 2
+    Y2 db 2                ;current y coordinate of player 2
 
     moveSpeed dw 8d
     gravity dw 5d
@@ -1181,6 +1182,8 @@ printTimeMid proc
 	               ret
 printTimeMid endp
 
+;this proc is a more generalized code for the exercise in sheet3 where we output an integer as a string
+;original code and idea is credited to https://stackoverflow.com/questions/44374434/display-timer-on-screen-in-assembly-masm-8086
 number2string proc                                                                           		;time conversion to string not that important
 	;FILL BUF WITH DOLLARS.
 	               push          si
