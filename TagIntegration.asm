@@ -100,7 +100,7 @@ ENDM subtractAndCheck
 	compareTemp          db ?                             	; a variable which holds the current second at any moment,
 	; this is used in order to detect if a second has actually passed or not
 	secondsBuffer        db 6 dup (?)                     	; an array to hold the ascii code of seconds to be printed
-	curSec               db 60                       	;a variable that has the current value to be printed
+	curSec               db 4                      	;a variable that has the current value to be printed
 	roundTime            db -1d                           	;sets the time the user wants to end the round at
 
 	collisionTimer       db 0                             	;cur value of the change timer when a collision occurs
@@ -117,8 +117,8 @@ ENDM subtractAndCheck
 
     PLAYER1NAME			DB		15,?,15 DUP('$'),'$'
     PLAYER2NAME			DB		15,?,15 DUP('$'),'$'
-    P1winsText          DB      'PLAYER 1 WINS!!$'
-    P2winsText          DB      'PLAYER 2 WINS!!$'
+    P1winsText          DB      'PLAYER 1 WINS$'
+    P2winsText          DB      'PLAYER 2 WINS$'
 
     SERVING				DB		1					;0 is the no one serving, 1 is player 1 is serving, 2 is player 2
     ;player1score		db		30H					;scores are 0 ascii
@@ -268,9 +268,12 @@ main proc far
 exitLoop:
 
         call drawLevel1
+        mov ah,0
+        mov al,3
+        int 10h
 
         mov ah,2          		;Move Cursor to upper middle of screen
-		mov dx,0110h      		
+		mov dx,0031d     		
 		int 10h 
 
         cmp tag,0
@@ -1280,10 +1283,11 @@ writePlayer1:
     jmp writeplayer1
 
 player2cursor:
-    mov  ah,2
-	mov  dx,0022h
-	    ;move cursor to right of the screeen
-    mov SI,offset PLAYER2NAME+2    
+    
+    mov ah,2
+    mov dx,0040d
+    sub dl,PLAYER2NAME+1
+    mov SI,offset PLAYER2NAME+2
 
 writePlayer2:   
     int 10h
