@@ -852,30 +852,45 @@ KeyAction PROC
         
 	                      cmp           AH, 80                                                          	;DOWN
 	                      JE            player2down
+    ;f4 key
+						  CMP           AH,3Eh
+						  je            f4action						  
 
 	;PLAYER 1 KEYS
-	                      CMP           AL, 77H
-	                      JE            player1up                                                       	; w
-	                      CMP           AL, 57H
-	                      JE            player1up                                                       	; W
 
-	                      CMP           AL, 61H
-	                      JE            player1left                                                     	; a
-	                      CMP           AL, 41H
-	                      JE            player1left                                                     	; A
+						  CMP           AH, 11h                                                          	;w scan
+	                      JE            player2up
 
-	                      CMP           AL, 64H
-	                      JE            player1right                                                    	; d
-	                      CMP           AL, 44H
-	                      JE            player1right                                                    	; D
+	                      CMP           AH, 1eh                                                          	;LEFT a
+	                      JE            player2left
 
-	                      CMP           AL, 53H
-	                      JE            player1down                                                     	;S
-	                      CMP           AL, 73H
-	                      JE            player1down                                                     	;s
+	                      CMP           AH, 20h                                                          	;RIGHT
+	                      JE            player2right
+        
+	                      cmp           AH, 1fh                                                          	;DOWN
+	                      JE            player2down
+	                    ;   CMP           AL, 77H
+	                    ;   JE            player1up                                                       	; w
+	                    ;   CMP           AL, 57H
+	                    ;   JE            player1up                                                       	; W
+
+	                    ;   CMP           AL, 61H
+	                    ;   JE            player1left                                                     	; a
+	                    ;   CMP           AL, 41H
+	                    ;   JE            player1left                                                     	; A
+
+	                    ;   CMP           AL, 64H
+	                    ;   JE            player1right                                                    	; d
+	                    ;   CMP           AL, 44H
+	                    ;   JE            player1right                                                    	; D
+
+	                    ;   CMP           AL, 53H
+	                    ;   JE            player1down                                                     	;S
+	                    ;   CMP           AL, 73H
+	                    ;   JE            player1down                                                     	;s
 
 	                      RET
-
+	
 
 	;PLAYER 2 ACTIONS
 	player2up:            
@@ -910,6 +925,10 @@ KeyAction PROC
 	player1down:          
 	                      MOV           X1, 0
 	                      MOV           Y1, 2
+
+	f4action:
+						  call          mainscreenui
+	                      call          menuinput
 	END_KEY_ACTIONS:      
 
 	                      RET
