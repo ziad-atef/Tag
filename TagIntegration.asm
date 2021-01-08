@@ -97,6 +97,7 @@ ENDM subtractAndCheck
 	p2_tag_x             dw 315d
 	p2_tag_y             dw 177d
 
+	EndRound             db 0
 	;cheesecake
 	;variables for the timer
 	compareTemp          db ?                                                    	; a variable which holds the current second at any moment,
@@ -188,8 +189,9 @@ ENDM subtractAndCheck
 main proc far
 	                      mov           ax,@data
 	                      mov           ds,ax
-
+	
 	                      call          getusername
+	start:
 	                      call          mainscreenui
 	                      call          menuinput
 
@@ -268,11 +270,14 @@ main proc far
 	                      call          Level1BoundariesCheck
 	                      call          checkCollision
 	                      colorScreen   80
-    
+
+						  cmp           EndRound, 1
+						  mov           EndRound, 0
+						  jz            start          
 	                      jmp           display_time
 	exitLoop:             
 
-
+		colorScreen   80
         call drawLevel1
         mov ah,0
         mov al,3
@@ -859,16 +864,16 @@ KeyAction PROC
 	;PLAYER 1 KEYS
 
 						  CMP           AH, 11h                                                          	;w scan
-	                      JE            player2up
+	                      JE            player1up
 
 	                      CMP           AH, 1eh                                                          	;LEFT a
-	                      JE            player2left
+	                      JE            player1left
 
 	                      CMP           AH, 20h                                                          	;RIGHT
-	                      JE            player2right
+	                      JE            player1right
         
 	                      cmp           AH, 1fh                                                          	;DOWN
-	                      JE            player2down
+	                      JE            player1down
 	                    ;   CMP           AL, 77H
 	                    ;   JE            player1up                                                       	; w
 	                    ;   CMP           AL, 57H
@@ -908,6 +913,7 @@ KeyAction PROC
 	player2down:          
 	                      MOV           X2, 0
 	                      MOV           Y2, 2
+						  RET
 
 	;PLAYER 1 ACTIONS
 	player1up:            
@@ -925,10 +931,10 @@ KeyAction PROC
 	player1down:          
 	                      MOV           X1, 0
 	                      MOV           Y1, 2
+						  RET
 
 	f4action:
-						  call          mainscreenui
-	                      call          menuinput
+						  MOV     EndRound, 1
 	END_KEY_ACTIONS:      
 
 	                      RET

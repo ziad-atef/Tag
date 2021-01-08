@@ -70,18 +70,18 @@ ENDM checkDifference
 .model small
 .stack 64
 .data
-	platformsCount DW 9                                         	;a variable to include the number of platforms in order to use in loops to reference in macros
+	Level2platformsCount DW 9                                         	;a variable to include the number of platforms in order to use in loops to reference in macros
 
 	; the following arrays contain the x,y,color,width,and height of all platforms
 	; the number of elements in each array is platformsCount
-	Xpoints        DW 0, 80, 230, 10, 220, 95, 10, 220, 95
-	Ypoints        DW 190, 160, 160, 130, 130, 100, 70, 70, 30
-	Pcolors        DB 10, 200, 200, 200, 200, 200, 200, 200, 200
-	Pwidths        DW 320, 10, 10, 80, 80, 120, 80, 80, 120
-	Pheights       DW 10, 29, 29, 3, 3, 3, 3, 3, 3
-	Velocities     DW 0, 0, 0, 1, 1, 0, 2, 2, 0
-	previousTime   db ?
-	testVelocity   dw 5
+	Level2Xpoints        DW 0, 80, 230, 10, 220, 95, 10, 220, 95
+	Level2Ypoints        DW 190, 160, 160, 130, 130, 100, 70, 70, 30
+	Level2Pcolors        DB 10, 200, 200, 200, 200, 200, 200, 200, 200
+	Level2Pwidths        DW 320, 10, 10, 80, 80, 120, 80, 80, 120
+	Level2Pheights       DW 10, 29, 29, 3, 3, 3, 3, 3, 3
+	Level2Velocities     DW 0, 0, 0, 1, 1, 0, 2, 2, 0
+	Level2previousTime   db ?
+	Level2testVelocity   dw 5
 	
 	;getSystemTime>>previousTime>>whenever not equal>>inc Xpoints 1/10
 .code
@@ -112,12 +112,12 @@ main endp
 drawLevel2 proc
 	              MOV          SI, 0000h                                                       	;used as an iterator to reference points in Xpoints,Ypoints Pheights, Pwidths
 	              MOV          DI, 0000h                                                       	;used as an iterator with half the value of SI because colors array is a Byte not a word so we will need to iterate over half the value
-	              MOV          BX, platformsCount
+	              MOV          BX, Level2platformsCount
 	              ADD          BX, BX
 	DrawPlatforms:
 	              mov          ax, Velocities[SI]                                              	;Add into each xPoint, Velocity:
-	              add          Xpoints[SI], ax
-	              drawPlatform Xpoints[SI], Ypoints[SI], Pcolors[DI], Pheights[SI], Pwidths[SI]
+	              add          Level2Xpoints[SI], ax
+	              drawPlatform Level2Xpoints[SI], Level2Ypoints[SI], Level2Pcolors[DI], Level2Pheights[SI], Level2Pwidths[SI]
 
 	              inc          DI
 	              add          SI,2
