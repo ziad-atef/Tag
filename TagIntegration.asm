@@ -52,6 +52,23 @@ push ax
 pop ax
 ENDM subtractAndCheck
 
+Initialize macro
+mov player1_x, 00d
+mov player1_y, 182d
+mov player2_x, 312d
+mov player2_y, 182d
+mov oldTime,0
+mov X1, 0
+mov Y1, 2
+mov X2, 0
+mov Y2, 2
+mov player1JumpState, 0
+mov player2JumpState, 0
+mov player1FallState, 0
+mov player2FallState, 0
+mov EndRound, 0
+mov curSec, 60
+ENDM Initialize
 .286
 .model small
 .stack 64
@@ -67,8 +84,8 @@ ENDM subtractAndCheck
 
     X1 db 0             ;current x coordinate of player 1   CHECK
     Y1 db 2             ;current y coordinate of player 1
-    X2 db 0              ;current x coordinate of player 2
-    Y2 db 2                ;current y coordinate of player 2
+    X2 db 0             ;current x coordinate of player 2
+    Y2 db 2             ;current y coordinate of player 2
 
 	moveSpeed            dw 8d
 	gravity              dw 5d
@@ -192,6 +209,7 @@ main proc far
 	
 	                      call          getusername
 	start:
+						  Initialize
 	                      call          mainscreenui
 	                      call          menuinput
 
@@ -272,7 +290,6 @@ main proc far
 	                      colorScreen   80
 
 						  cmp           EndRound, 1
-						  mov           EndRound, 0
 						  jz            start          
 	                      jmp           display_time
 	exitLoop:             
