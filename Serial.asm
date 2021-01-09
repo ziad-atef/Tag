@@ -221,7 +221,9 @@ main proc far
 	                      mov           bl,00h
 	                      int           10h
     
-	display_time:         
+	display_time:
+						  cmp           EndRound, 1
+						  jz            start           
 	;gets the current system time
 	                      mov           ah, 2ch
 	                      int           21h                                                             	;seconds return in dh
@@ -257,7 +259,6 @@ main proc far
 	                      mov           collisionCompareTemp, dh                                        	; if a second has passed move this current sec to the temp variable
 	; to keep comparing with the upcoming seconds
 	               
-
 	                      mov           bh,collisionTimer
 	                      dec           curCollisionSec
 	                      cmp           curCollisionSec,bh                                              	;if the collision timer has reached zero we want to reset the timer
@@ -268,7 +269,6 @@ main proc far
 	                      mov           curCollisionSec,4                                               	;this code block is responsible for resetting the timer
 	                      mov           bh,0
 	                      mov           collisionRunning,0
-
 	time:                 
     
 	                      call          drawLevel1
@@ -288,10 +288,7 @@ main proc far
 	                      call          PlayerStatus
 	                      call          Level1BoundariesCheck
 	                      call          checkCollision
-	                      colorScreen   80
-
-						  cmp           EndRound, 1
-						  jz            start          
+	                      colorScreen   80        
 	                      jmp           display_time
 	exitLoop:             
 
