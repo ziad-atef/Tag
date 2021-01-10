@@ -74,7 +74,9 @@ ENDM Initialize
 .stack 64
 .data
 
-	isPlayer1 db 1
+	isPlayer1 db 0
+	player1key db 0
+	player2key db 0
     player1_x dw 00d    ;initial x coordinate for player 1
     player1_y dw 182d   ;initial y coordinate for player 1
     player_size dw 7d   ;square area for both players
@@ -884,12 +886,13 @@ KeyClick PROC
 						  mov  dx , 3FDH                   	; Line Status Register
 				          in   al , dx
 						  test al , 1
-						  JZ   lbl  
+						  JZ   lbl
 
 						  mov  dx , 03F8H
 						  in   al , dx
 						  mov  ah, al
 						  call RecieveAction
+						  
 
 	lbl:
 	                      dec           SI
@@ -1019,6 +1022,7 @@ RecieveAction PROC
 			RET
 RET
 RecieveAction ENDP
+
 KeyAction PROC
 
 	;PLAYER 2 KEYS

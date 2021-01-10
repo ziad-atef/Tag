@@ -221,7 +221,9 @@ main proc far
 	                      mov           bl,00h
 	                      int           10h
     
-	display_time:         
+	display_time:
+						  cmp           EndRound, 1
+						  jz            start           
 	;gets the current system time
 	                      mov           ah, 2ch
 	                      int           21h                                                             	;seconds return in dh
@@ -290,8 +292,7 @@ main proc far
 	                      call          checkCollision
 	                      colorScreen   80
 
-						  cmp           EndRound, 1
-						  jz            start          
+						          
 	                      jmp           display_time
 	exitLoop:             
 
