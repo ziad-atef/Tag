@@ -69,24 +69,24 @@ mov player2FallState, 0
 mov EndRound, 0
 mov curSec, 60
 ENDM Initialize
-
 .286
 .model small
 .stack 64
 .data
 
-	player1_x            dw 00d                                                  	;initial x coordinate for player 1
-	player1_y            dw 182d                                                 	;initial y coordinate for player 1
-	player_size          dw 7d                                                   	;square area for both players
-	player2_x            dw 312d                                                 	;initial x coordinate for player 2
-	player2_y            dw 182d                                                 	;initial y coordinate for player 2
-	oldTime              db 0                                                    	; a temp variable to keep calculating time correctly
-	;where each second is compared to the second preceding it
+	isPlayer1 db 1
+    player1_x dw 00d    ;initial x coordinate for player 1
+    player1_y dw 182d   ;initial y coordinate for player 1
+    player_size dw 7d   ;square area for both players
+    player2_x dw 312d   ;initial x coordinate for player 2
+    player2_y dw 182d   ;initial y coordinate for player 2
+    oldTime db 0        ; a temp variable to keep calculating time correctly 
+                        ;where each second is compared to the second preceding it
 
-	X1                   db 0                                                    	;current x coordinate of player 1   CHECK
-	Y1                   db 2                                                    	;current y coordinate of player 1
-	X2                   db 0                                                    	;current x coordinate of player 2
-	Y2                   db 2                                                    	;current y coordinate of player 2
+    X1 db 0             ;current x coordinate of player 1   CHECK
+    Y1 db 2             ;current y coordinate of player 1
+    X2 db 0             ;current x coordinate of player 2
+    Y2 db 2             ;current y coordinate of player 2
 
 	moveSpeed            dw 8d
 	gravity              dw 5d
@@ -99,7 +99,7 @@ ENDM Initialize
 	player2JumpPos       dw ?
 
 
-	platformsCount       DW 8                                                    	;a variable to include the number of platforms in order to use in loops to reference in macros
+	platformsCount       DW 8                 ;a variable to include the number of platforms in order to use in loops to reference in macros
 
 	; the following arrays contain the x,y,color,width,and height of all platforms
 	; the number of elements in each array is platformsCount
@@ -129,77 +129,77 @@ ENDM Initialize
 	curCollisionSec      db 4                                                    	;starts at the max value we want the collision timer to be, in our case it is 4
 	collisionCompareTemp db ?
 
-	collisionRunning     db 0                                                    	; a variable to keep track of whether the collision timer is already running
+	collisionRunning     db 0                             	; a variable to keep track of whether the collision timer is already running
 
 
-	MODE                 DB 1                                                    	;1 is the mainscreen, 2 is chatting, 3 is game
-	;PLAYER1POS			DB		10 					;Y position of the top of  player
-	;PLAYER2POS			DB		10 					;Y position of the top of  player
-	;PLAYERSIZE			DB		?					;HEIGHT OF THE PADDLE
-	;playerspeed			db		5					;speed of the player
+    MODE				DB		1					;1 is the mainscreen, 2 is chatting, 3 is game
+    ;PLAYER1POS			DB		10 					;Y position of the top of  player 
+    ;PLAYER2POS			DB		10 					;Y position of the top of  player 
+    ;PLAYERSIZE			DB		?					;HEIGHT OF THE PADDLE
+    ;playerspeed			db		5					;speed of the player
 
-	PLAYER1NAME          DB 15,?,15 DUP('$'),'$'
-	PLAYER2NAME          DB 15,?,15 DUP('$'),'$'
-	P1winsText           DB 'PLAYER 1 WINS$'
-	P2winsText           DB 'PLAYER 2 WINS$'
+    PLAYER1NAME			DB		15,?,15 DUP('$'),'$'
+    PLAYER2NAME			DB		15,?,15 DUP('$'),'$'
+    P1winsText          DB      'PLAYER 1 WINS$'
+    P2winsText          DB      'PLAYER 2 WINS$'
 
-	SERVING              DB 1                                                    	;0 is the no one serving, 1 is player 1 is serving, 2 is player 2
-	;player1score		db		30H					;scores are 0 ascii
-	;player2score		db		30H
-	recievedchatinv      db 0                                                    	;0 for didn't recieve invite, 1 for recieved invite
-	recievedgameinv      db 0                                                    	;0 for didn't recieve invite, 1 for recieved invite
-	readytochat          db 0
-	readytogame          db 0
-	chatbyte             db ?
-	ourcursor            dw ?
-	othercursor          dw ?
-	;--------------------------splashscreen strings----------------------------------------;
-	SPLASH1              DB 'Enter first player name:$'
-	NAME1                DB 'Player 1:$'
-	SPLASH2              DB 'Press Enter key to continue$'
-	SPLASH3              DB 'Enter second player name:$'
-	NAME2                DB 'Player 2:$'                                         	;not used in phase 3
-	SPLASH4              DB 'Press Enter key to continue$'
+    SERVING				DB		1					;0 is the no one serving, 1 is player 1 is serving, 2 is player 2
+    ;player1score		db		30H					;scores are 0 ascii
+    ;player2score		db		30H
+    recievedchatinv		db		0					;0 for didn't recieve invite, 1 for recieved invite
+    recievedgameinv		db		0					;0 for didn't recieve invite, 1 for recieved invite
+    readytochat			db		0
+    readytogame			db		0
+    chatbyte			db		?
+    ourcursor			dw		?
+    othercursor         dw		?
+    ;--------------------------splashscreen strings----------------------------------------;
+    SPLASH1				DB		'Enter first player name:$'
+    NAME1				DB		'Player 1:$'
+    SPLASH2				DB		'Press Enter key to continue$'
+    SPLASH3	    		DB		'Enter second player name:$'
+    NAME2				DB		'Player 2:$'		;not used in phase 3
+    SPLASH4				DB		'Press Enter key to continue$'
 
-	;SPLASH3				DB		'WAITING FOR THE OTHER USER TO ENTER NAME...$'
-	;--------------------------------------------------------------------------------------;
-
-
-	;---------------------------gamemode strings-----------------------------------------;
-	PAUSEDSTRING         DB 'Game is paused$'
-	PAUSEDSPACE          DB 'Press SPACE to continue ',01H,'$'
-	PAUSEDESCAPE         DB 'Press ESC to quit to main menu$'
-	ESCTOPAUSE           DB 'Press ESC to pause the game$'
-
-	SCORE                DB "'s score:$"
-	PLAYERWONSTRING      DB ' WINS!!!!!!!!!!!$'
-	WONESC               DB 'Press ESC to exit the game$'
-	WONSPACE             DB 'Press SPACE to go to main menu$'
-	;--------------------------------------------------------------------------------------;
-
-	;---------------------------mainscreen strings-----------------------------------------;
-	MAINSCREEN1          DB '->To start chatting press F1$'
-	MAINSCREEN2          DB '->To start TAG game press F2$'
-	MAINSCREEN3          DB '->To exit the game press ESC$'
-	MAINSCREEN7          DB 'PLEASE WAIT WHILE THE OTHER USER SELECTS THE LEVEL$'
-	;--------------------------------------------------------------------------------------;
-
-	;---------------------------chat strings-----------------------------------------;
-	MAINSCREEN4          DB 'GAME$'
-	MAINSCREEN5          DB 'CHAT$'
-	MAINSCREEN6          DB '->To exit the game press ESC$'
-	CHATEXIT             DB 'TO EXIT CHAT PRESS EXIT$'
-	;--------------------------------------------------------------------------------------;
+    ;SPLASH3				DB		'WAITING FOR THE OTHER USER TO ENTER NAME...$'
+    ;--------------------------------------------------------------------------------------;
 
 
+    ;---------------------------gamemode strings-----------------------------------------;
+    PAUSEDSTRING		DB		'Game is paused$'
+    PAUSEDSPACE			DB		'Press SPACE to continue ',01H,'$'
+    PAUSEDESCAPE		DB		'Press ESC to quit to main menu$'
+    ESCTOPAUSE			DB		'Press ESC to pause the game$'
 
-	;the includes are here so that they can work with the datasegment
-	;INCLUDE GUI.INC									;contains some general purpose functions that could be used
-	;INCLUDE MENUGUI.INC								;responsible for drawing all main menu
-	;INCLUDE MENUIN.INC								;responsible for getting the input in the main menu mode
-	;INCLUDE GAMEGUI.INC
-	;INCLUDE GAMEIN.INC
-	;INCLUDE CHAT.INC
+    SCORE				DB		"'s score:$"
+    PLAYERWONSTRING		DB		' WINS!!!!!!!!!!!$'
+    WONESC				DB		'Press ESC to exit the game$'
+    WONSPACE            DB		'Press SPACE to go to main menu$'
+    ;--------------------------------------------------------------------------------------;
+
+    ;---------------------------mainscreen strings-----------------------------------------;
+    MAINSCREEN1			DB		'->To start chatting press F1$'
+    MAINSCREEN2			DB		'->To start TAG game press F2$'
+    MAINSCREEN3			DB		'->To exit the game press ESC$'
+    MAINSCREEN7			DB		'PLEASE WAIT WHILE THE OTHER USER SELECTS THE LEVEL$'
+    ;--------------------------------------------------------------------------------------;
+
+    ;---------------------------chat strings-----------------------------------------;
+    MAINSCREEN4			DB		'GAME$'
+    MAINSCREEN5			DB		'CHAT$'
+    MAINSCREEN6			DB		'->To exit the game press ESC$'
+    CHATEXIT			DB		'TO EXIT CHAT PRESS EXIT$'
+    ;--------------------------------------------------------------------------------------;
+
+
+
+                                                    ;the includes are here so that they can work with the datasegment
+    ;INCLUDE GUI.INC									;contains some general purpose functions that could be used
+    ;INCLUDE MENUGUI.INC								;responsible for drawing all main menu
+    ;INCLUDE MENUIN.INC								;responsible for getting the input in the main menu mode
+    ;INCLUDE GAMEGUI.INC			
+    ;INCLUDE GAMEIN.INC			
+    ;INCLUDE CHAT.INC
 
             
 .code
@@ -209,10 +209,11 @@ main proc far
 	                      mov           ds,ax
 	
 	                      call          getusername
-	start:                
-	                      Initialize
+	start:
+						  Initialize
 	                      call          mainscreenui
 	                      call          menuinput
+						  call          initializeUART
 
 	                      graphicsMode  13h
 
@@ -221,9 +222,9 @@ main proc far
 	                      mov           bl,00h
 	                      int           10h
     
-	display_time:         
-	                      cmp           EndRound, 1
-	                      jz            start
+	display_time:
+						  cmp           EndRound, 1
+						  jz            start           
 	;gets the current system time
 	                      mov           ah, 2ch
 	                      int           21h                                                             	;seconds return in dh
@@ -259,7 +260,6 @@ main proc far
 	                      mov           collisionCompareTemp, dh                                        	; if a second has passed move this current sec to the temp variable
 	; to keep comparing with the upcoming seconds
 	               
-
 	                      mov           bh,collisionTimer
 	                      dec           curCollisionSec
 	                      cmp           curCollisionSec,bh                                              	;if the collision timer has reached zero we want to reset the timer
@@ -270,7 +270,6 @@ main proc far
 	                      mov           curCollisionSec,4                                               	;this code block is responsible for resetting the timer
 	                      mov           bh,0
 	                      mov           collisionRunning,0
-
 	time:                 
     
 	                      call          drawLevel1
@@ -290,21 +289,19 @@ main proc far
 	                      call          PlayerStatus
 	                      call          Level1BoundariesCheck
 	                      call          checkCollision
-	                      colorScreen   53
-
-						          
+	                      colorScreen   80        
 	                      jmp           display_time
 	exitLoop:             
 
-	                      colorScreen   53
-	                      call          drawLevel1
-	                      mov           ah,0
-	                      mov           al,3
-	                      int           10h
+		colorScreen   80
+        call drawLevel1
+        mov ah,0
+        mov al,3
+        int 10h
 
-	                      mov           ah,2                                                            	;Move Cursor to upper middle of screen
-	                      mov           dx,0031d
-	                      int           10h
+        mov ah,2          		;Move Cursor to upper middle of screen
+		mov dx,0031d     		
+		int 10h 
 
 	                      cmp           tag,0
 	                      je            player2win
@@ -323,6 +320,29 @@ main proc far
     
 	nameWritten:          int           20h
 main endp
+
+initializeUART proc
+	;	Set Divisor Latch Access Bit
+	               mov  dx,3fbh                     	; Line Control Register
+	               mov  al,10000000b                	;Set Divisor Latch Access Bit
+	               out  dx,al                       	;Out it
+
+	;	Set LSB byte of the Baud Rate Divisor Latch register.
+	               mov  dx,3f8h
+	               mov  al,0ch
+	               out  dx,al
+
+	;	Set MSB byte of the Baud Rate Divisor Latch register.
+	               mov  dx,3f9h
+	               mov  al,00h
+	               out  dx,al
+
+	;	Set port configuration
+	               mov  dx,3fbh
+	               mov  al,00011011b
+	               out  dx,al
+	               ret
+initializeUART ENDP
 
 getusername proc
 		
@@ -841,17 +861,37 @@ KeyClick PROC
 
 	                      mov           SI, 4
 	last4clicks:          
+						  mov  dx , 3FDH                   	; Line Status Register
+				          In   al , dx                     	;Read Line Status
+						  test al , 00100000b
+						  JZ   receive
 
 	                      mov           ah,1
 	                      int           16H
 
-	                      jz            endPress
+	                      jz            receive
 
 	                      mov           ah,0
 	                      int           16H
 
-	                      call          KeyAction
-    
+	                      call          SendAction
+						  ;If empty put the VALUE in Transmit data register
+						  mov  dx , 3F8H                   	; Transmit data register
+						  mov  al, ah
+						  out  dx , al
+						  receive:
+						  ;Check that Data is Ready
+						  mov  dx , 3FDH                   	; Line Status Register
+				          in   al , dx
+						  test al , 1
+						  JZ   lbl  
+
+						  mov  dx , 03F8H
+						  in   al , dx
+						  mov  ah, al
+						  call RecieveAction
+
+	lbl:
 	                      dec           SI
 	                      cmp           SI,0
 	                      jnz           last4clicks
@@ -862,65 +902,123 @@ KeyClick PROC
 	                      RET
 KeyClick ENDP
 
-SerialAction PROC
+SendAction PROC
 	
 	                      CMP           AH, 72                                                          	;UP
-	                      JE            playerup
+	                      JE            Splayerup
 
 	                      CMP           AH, 75                                                          	;LEFT
-	                      JE            playerleft
+	                      JE            Splayerleft
 
 	                      CMP           AH, 77                                                          	;RIGHT
-	                      JE            playerright
+	                      JE            Splayerright
         
 	                      cmp           AH, 80                                                          	;DOWN
-	                      JE            playerdown
+	                      JE            Splayerdown
 
-	                      RET
+						  RET
 
-	playerup:             
-	                      cmp           isPlayer1, 1
-	                      jne           Serialup2
-	;up1:
-	                      MOV           Y1, 1
-	                      RET
-	Serialup2:            
-	                      MOV           Y2, 1
-	                      RET
+	Splayerup:
+		cmp isPlayer1, 1
+		jne SSerialup2
+			;up1:
+			MOV Y1, 1
+			RET
+			SSerialup2:
+			MOV Y2, 1
+			RET
 
-	playerleft:           
-	                      cmp           isPlayer1, 1
-	                      jne           Serialleft2
-	;left1:
-	                      MOV           X1, 2
-	                      RET
-	Serialleft2:          
-	                      MOV           X2, 2
-	                      RET
+	Splayerleft:
+		cmp isPlayer1, 1
+		jne SSerialleft2
+			;left1:
+			MOV X1, 2
+			RET
+			SSerialleft2:
+			MOV X2, 2
+			RET
 
-	playerright:          
-	                      cmp           isPlayer1, 1
-	                      jne           Serialright2
-	;left1:
-	                      MOV           X1, 1
-	                      RET
-	Serialright2:         
-	                      MOV           X2, 1
-	                      RET
-	playerdown:           
-	                      cmp           isPlayer1, 1
-	                      jne           Serialdown2
-	;left1:
-	                      MOV           X1, 0
-	                      MOV           Y1, 2
-	                      RET
-	Serialdown2:          
-	                      MOV           X2, 0
-	                      MOV           Y2, 2
-	                      RET
-	                      RET
-SerialAction ENDP
+	Splayerright:
+		cmp isPlayer1, 1
+		jne SSerialright2
+			;left1:
+			MOV X1, 1
+			RET
+			SSerialright2:
+			MOV X2, 1
+			RET
+	Splayerdown:
+		cmp isPlayer1, 1
+		jne SSerialdown2
+			;left1:
+			MOV X1, 0
+			MOV Y1, 2
+			RET
+			SSerialdown2:
+			MOV X2, 0
+			MOV Y2, 2
+			RET
+RET
+SendAction ENDP
 
+RecieveAction PROC
+	
+	                      CMP           AH, 72                                                          	;UP
+	                      JE            Rplayerup
+
+	                      CMP           AH, 75                                                          	;LEFT
+	                      JE            Rplayerleft
+
+	                      CMP           AH, 77                                                          	;RIGHT
+	                      JE            Rplayerright
+        
+	                      cmp           AH, 80                                                          	;DOWN
+	                      JE            Rplayerdown
+
+						  RET
+
+	Rplayerup:
+		cmp isPlayer1, 0
+		jne RSerialup2
+			;up1:
+			MOV Y1, 1
+			RET
+			RSerialup2:
+			MOV Y2, 1
+			RET
+
+	Rplayerleft:
+		cmp isPlayer1, 0
+		jne RSerialleft2
+			;left1:
+			MOV X1, 2
+			RET
+			RSerialleft2:
+			MOV X2, 2
+			RET
+
+	Rplayerright:
+		cmp isPlayer1, 0
+		jne RSerialright2
+			;left1:
+			MOV X1, 1
+			RET
+			RSerialright2:
+			MOV X2, 1
+			RET
+	Rplayerdown:
+		cmp isPlayer1, 0
+		jne RSerialdown2
+			;left1:
+			MOV X1, 0
+			MOV Y1, 2
+			RET
+			RSerialdown2:
+			MOV X2, 0
+			MOV Y2, 2
+			RET
+RET
+RecieveAction ENDP
 KeyAction PROC
 
 	;PLAYER 2 KEYS
@@ -935,42 +1033,42 @@ KeyAction PROC
         
 	                      cmp           AH, 80                                                          	;DOWN
 	                      JE            player2down
-	;f4 key
-	                      CMP           AH,3Eh
-	                      je            f4action
+    ;f4 key
+						  CMP           AH,3Eh
+						  je            f4action						  
 
 	;PLAYER 1 KEYS
 
-	                      CMP           AH, 11h                                                         	;w scan
+						  CMP           AH, 11h                                                          	;w scan
 	                      JE            player1up
 
-	                      CMP           AH, 1eh                                                         	;LEFT a
+	                      CMP           AH, 1eh                                                          	;LEFT a
 	                      JE            player1left
 
-	                      CMP           AH, 20h                                                         	;RIGHT
+	                      CMP           AH, 20h                                                          	;RIGHT
 	                      JE            player1right
         
-	                      cmp           AH, 1fh                                                         	;DOWN
+	                      cmp           AH, 1fh                                                          	;DOWN
 	                      JE            player1down
-	;   CMP           AL, 77H
-	;   JE            player1up                                                       	; w
-	;   CMP           AL, 57H
-	;   JE            player1up                                                       	; W
+	                    ;   CMP           AL, 77H
+	                    ;   JE            player1up                                                       	; w
+	                    ;   CMP           AL, 57H
+	                    ;   JE            player1up                                                       	; W
 
-	;   CMP           AL, 61H
-	;   JE            player1left                                                     	; a
-	;   CMP           AL, 41H
-	;   JE            player1left                                                     	; A
+	                    ;   CMP           AL, 61H
+	                    ;   JE            player1left                                                     	; a
+	                    ;   CMP           AL, 41H
+	                    ;   JE            player1left                                                     	; A
 
-	;   CMP           AL, 64H
-	;   JE            player1right                                                    	; d
-	;   CMP           AL, 44H
-	;   JE            player1right                                                    	; D
+	                    ;   CMP           AL, 64H
+	                    ;   JE            player1right                                                    	; d
+	                    ;   CMP           AL, 44H
+	                    ;   JE            player1right                                                    	; D
 
-	;   CMP           AL, 53H
-	;   JE            player1down                                                     	;S
-	;   CMP           AL, 73H
-	;   JE            player1down                                                     	;s
+	                    ;   CMP           AL, 53H
+	                    ;   JE            player1down                                                     	;S
+	                    ;   CMP           AL, 73H
+	                    ;   JE            player1down                                                     	;s
 
 	                      RET
 	
@@ -991,7 +1089,7 @@ KeyAction PROC
 	player2down:          
 	                      MOV           X2, 0
 	                      MOV           Y2, 2
-	                      RET
+						  RET
 
 	;PLAYER 1 ACTIONS
 	player1up:            
@@ -1009,10 +1107,10 @@ KeyAction PROC
 	player1down:          
 	                      MOV           X1, 0
 	                      MOV           Y1, 2
-	                      RET
+						  RET
 
-	f4action:             
-	                      MOV           EndRound, 1
+	f4action:
+						  MOV     EndRound, 1
 	END_KEY_ACTIONS:      
 
 	                      RET
@@ -1117,9 +1215,9 @@ drawLevel1 endp
 
 Level1BoundariesCheck PROC
 	;player1
-	                      cmp           player1FallState, 1                                             	;check if the character is airborne falling down
+	                      cmp           player1FallState, 1
 	                      jne           p1sitting
-	                      cmp           player1_y,27d                                                   	;then the following checks for the platforms minus 8
+	                      cmp           player1_y,27d
 	                      je            p1platform1
 	                      cmp           player1_y,62d
 	                      je            p1platform2
@@ -1134,13 +1232,13 @@ Level1BoundariesCheck PROC
 
 	                      jmp           p1RightBound
 
-	p1platform1:                                                                                        	;any middle big platform, checks if the character is in its range to stop falling down
+	p1platform1:          
 	                      mov           player1FallState, 1
 	                      cmp           player1_x, 87
 	                      jb            p1RightBound
 	                      cmp           player1_x, 215
 	                      ja            p1RightBound
-	                      jmp           p1ground                                                        	;if he reached this condition then he is on the platform and should stop falling
+	                      jmp           p1ground
 
 	p1platform2:          
 	                      mov           player1FallState, 1
@@ -1293,9 +1391,9 @@ printTimeMid proc
 printTimeMid endp
 
 
-	;this proc is a more generalized code for the exercise in sheet3 where we output an integer as a string
-	;original code and idea is credited to https://stackoverflow.com/questions/44374434/display-timer-on-screen-in-assembly-masm-8086
-number2string proc                                                                                  		;time conversion to string not that important
+;this proc is a more generalized code for the exercise in sheet3 where we output an integer as a string
+;original code and idea is credited to https://stackoverflow.com/questions/44374434/display-timer-on-screen-in-assembly-masm-8086
+number2string proc                                                                           		;time conversion to string not that important
 
 	;FILL BUF WITH DOLLARS.
 	                      push          si
@@ -1376,31 +1474,31 @@ writePlayerNames proc
 	                      mov           SI, offset PLAYER1NAME+2
     
 
-	writePlayer1:         
-	                      int           10h
-	                      mov           al,[SI]
-	                      cmp           al,13
-	                      je            player2cursor                                                   	;checks if the current char is a dollar sign, if not continue printing the name
+writePlayer1:
+    int 10h
+    mov al,[SI]
+    cmp al,13
+    je player2cursor ;checks if the current char is a dollar sign, if not continue printing the name
 
-	                      mov           ah, 9
-	                      mov           bh, 0
-	                      mov           bl, 06h                                                         	;brown
-	                      mov           cx, 1
-	                      int           10h
-	                      add           SI,1
-	                      add           dl,1
-	                      mov           ah,2
-	                      jmp           writeplayer1
+    mov  ah, 9
+    mov  bh, 0
+    mov  bl, 06h  ;brown
+    mov  cx, 1  
+    int  10h
+    add SI,1
+    add dl,1
+    mov ah,2
+    jmp writeplayer1
 
-	player2cursor:        
+player2cursor:
     
-	                      mov           ah,2
-	                      mov           dx,0040d
-	                      sub           dl,PLAYER2NAME+1
-	                      mov           SI,offset PLAYER2NAME+2
+    mov ah,2
+    mov dx,0040d
+    sub dl,PLAYER2NAME+1
+    mov SI,offset PLAYER2NAME+2
 
-	writePlayer2:         
-	                      int           10h
+writePlayer2:   
+    int 10h
     
 	                      mov           al,[SI]
 	                      cmp           al,13
