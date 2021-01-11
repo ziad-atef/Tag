@@ -1222,9 +1222,9 @@ drawLevel2 endp
 
 Level1BoundariesCheck PROC
 	;player1
-	                      cmp           player1FallState, 1
+	                      cmp           player1FallState, 1		;check if the character is airborne falling down
 	                      jne           p1sitting
-	                      cmp           player1_y,27d
+	                      cmp           player1_y,27d			;then the following checks for the platforms minus 8
 	                      je            p1platform1
 	                      cmp           player1_y,62d
 	                      je            p1platform2
@@ -1239,13 +1239,13 @@ Level1BoundariesCheck PROC
 
 	                      jmp           p1RightBound
 
-	p1platform1:          
+	p1platform1:          									;any middle big platform, checks if the character is in its range to stop falling down
 	                      mov           player1FallState, 1
 	                      cmp           player1_x, 87
 	                      jb            p1RightBound
 	                      cmp           player1_x, 215
 	                      ja            p1RightBound
-	                      jmp           p1ground
+	                      jmp           p1ground			;if he reached this condition then he is on the platform and should stop falling
 
 	p1platform2:          
 	                      mov           player1FallState, 1
@@ -1259,7 +1259,7 @@ Level1BoundariesCheck PROC
 	                      jb            p1RightBound
 
 	p1ground:             
-	                      mov           player1FallState,0h
+	                      mov           player1FallState,0h		
 	                      jmp           p1RightBound
 	                      ret
 
