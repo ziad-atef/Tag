@@ -85,12 +85,10 @@ MAIN PROC FAR
 	;If Ready read the VALUE in Receive data register
 	               mov  dx , 03F8H
 	               in   al , dx
+
+				   call chatAuxKeys2
+
 	               mov  VALUE , al
-
-
-                  ;check if enter ascii
-                  ;inc byte ptr[di+1]
-                  ;jump over the next block
 
 
 	               mov  ah,02h
@@ -185,59 +183,81 @@ checkNewLine2 endp
 checkEndHalf1 proc
 	cmp byte ptr[si+1],13		;check for end of first half
 	jnz dontScroll1
-	mov ah,06h
-	mov bh,74h
-	mov al,01h
-	mov cx,0h
-	mov dx,7911d
-	int 10h
+	; mov ah,06h
+	; mov bh,74h
+	; mov al,01h
+	; mov cx,0h
+	; mov dx,7911d
+	; int 10h
 
-	sub byte ptr[si+1],1
-	mov byte ptr[si],0
+	; sub byte ptr[si+1],1
+	; mov byte ptr[si],0
 
 	call colorhalf1		;this does the job but better be removed and the actual problem should be fixed
-	mov byte ptr[si+1],0
+	mov byte ptr[si+1],0	;this way instead of scrolling one line the cursor goes back to the initial point after deleting all the existing messages
 	mov byte ptr[si],0
 dontScroll1: ret
 checkEndHalf1 endp
 
 checkEndHalf2 proc
-	cmp byte ptr[si+1],24			;check for end of second half
+	cmp byte ptr[di+1],25			;check for end of second half
 	jb dontScroll2
-	mov ah,06h
-	mov bh,74h
-	mov al,01h
-	mov cx,0h
-	mov dx,7924d
-	int 10h
+	; mov ah,06h
+	; mov bh,74h
+	; mov al,01h
+	; mov cx,0h
+	; mov dx,7924d
+	; int 10h
 
-	sub byte ptr[di+1],1
-	mov byte ptr[di],0
+	; sub byte ptr[di+1],1
+	; mov byte ptr[di],0
 
 	
 	call colorhalf2		;this does the job but better be removed and the actual problem should be fixed
-	mov byte ptr[si+1],0
-	mov byte ptr[si],0
+	mov byte ptr[di+1],13
+	mov byte ptr[di],0
 
 dontScroll2: ret
 checkEndHalf2 endp
 
 chatAuxKeys1	proc
-	cmp VALUE, 0Dh
-	jnz next1
+	cmp VALUE, 0Dh		;check for enter ASCII
+	jnz next11
 
-	mov byte ptr[si],-1
-	add byte ptr[si+1],1
+	mov byte ptr[si],-1		;returns to the beginning of the line
+	add byte ptr[si+1],1	;goes down to the next line
 
-next1:
-	cmp VALUE ,8
-	jnz next2
-	SUB byte ptr[si],2
+next11:
+	cmp VALUE ,8		;check for backspace ASCII
+	jnz next12
+	SUB byte ptr[si],2		;decrements 2 because the backspace symbol is also typed but the dob is done correctly
 
-next2: cmp VALUE, 27	; temporarily set to esc ascii because f3 key needs the function bitton to be pressed as well which somehow alters he ascii
+next12: cmp VALUE, 27	; temporarily set to esc ascii because f3 key needs the function button to be pressed as well which somehow alters he ascii
 		jne retToMain1
 		MOV endChat,1
 
 retToMain1: ret
 chatAuxKeys1 endp
+
+
+chatAuxKeys2	proc
+	cmp VALUE, 0Dh		;check for enter ASCII
+	jnz next21
+
+	mov byte ptr[di],-1
+	add byte ptr[di+1],1
+
+next21:
+	cmp VALUE ,8		;check for backspace ASCII
+	jnz next22
+	SUB byte ptr[di],2
+
+next22: cmp VALUE, 27	; temporarily set to esc ascii because f3 key needs the function button to be pressed as well which somehow alters he ascii
+		jne retToMain2
+		MOV endChat,1
+
+retToMain2: ret
+chatAuxKeys2 endp
+
+
 END MAIN
