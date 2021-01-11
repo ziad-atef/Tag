@@ -74,6 +74,9 @@ ENDM Initialize
 .model small
 .stack 64
 .data
+	isLevel1             DB ?
+
+	isPlayer1            db 0
 
 	player1_x            dw 00d                                                  	;initial x coordinate for player 1
 	player1_y            dw 182d                                                 	;initial y coordinate for player 1
@@ -88,7 +91,7 @@ ENDM Initialize
 	X2                   db 0                                                    	;current x coordinate of player 2
 	Y2                   db 2                                                    	;current y coordinate of player 2
 
-	moveSpeed            dw 8d
+	moveSpeed            dw 6d
 	gravity              dw 5d
 
 	player1JumpState     db 0
@@ -108,6 +111,19 @@ ENDM Initialize
 	Pcolors              DB 10,200,200,200,200,200,200,200
 	Pwidths              DW 320,120,80,80,120,80,80,120
 	Pheights             DW 10,3,3,3,3,3,3,3
+
+	Level2platformsCount DW 9                                                    	;a variable to include the number of platforms in order to use in loops to reference in macros
+
+	; the following arrays contain the x,y,color,width,and height of all platforms
+	; the number of elements in each array is platformsCount
+	Level2Xpoints        DW 0, 80, 230, 10, 220, 95, 10, 220, 95
+	Level2Ypoints        DW 190, 160, 160, 130, 130, 100, 70, 70, 30
+	Level2Pcolors        DB 10, 200, 200, 200, 200, 200, 200, 200, 200
+	Level2Pwidths        DW 320, 10, 10, 80, 80, 120, 80, 80, 120
+	Level2Pheights       DW 10, 29, 29, 3, 3, 3, 3, 3, 3
+	Level2Velocities     DW 0, 0, 0, 1, 1, 0, 2, 2, 0
+	Level2previousTime   db ?
+	Level2testVelocity   dw 5
 
 	tag                  db 0
 	p1_tag_x             dw 3d
@@ -191,8 +207,10 @@ ENDM Initialize
 	CHATEXIT             DB 'TO EXIT CHAT PRESS EXIT$'
 	;--------------------------------------------------------------------------------------;
 
+	;----------------------------Level strings------------------------------------------------;
 
-
+	LevelString1         DB 'Please choose Level 1 or 2$'
+	LevelString2         DB 'Level:$'
 	;the includes are here so that they can work with the datasegment
 	;INCLUDE GUI.INC									;contains some general purpose functions that could be used
 	;INCLUDE MENUGUI.INC								;responsible for drawing all main menu
@@ -223,57 +241,62 @@ main proc far
     
 	display_time:         
 	                      cmp           EndRound, 1
-	                      jz            start
+	                      jz            exitLoop
 	;gets the current system time
 	                      mov           ah, 2ch
-	                      int           21h                                                             	;seconds return in dh
+	                      int           21h                                                                                           	;seconds return in dh
 
 	;TIMER (1 SECOND).
-	                      cmp           dh, compareTemp                                                 	;time
-	                      je            time                                                            	;keeps repeating the loop until a change has occured, now it is known that a second has actually passed
+	                      cmp           dh, compareTemp                                                                               	;time
+	                      je            time                                                                                          	;keeps repeating the loop until a change has occured, now it is known that a second has actually passed
 	;cheesecake: the loop is supposed to go back to label display_time
 	;but i changed it to go to label time so that the code flows normally
 	                      mov           compareTemp, dh
 
 	; bh will be used as a temp reg for round time if rount time is reached the loop stops
-	                      mov           bh,roundTime                                                    	;time
+	                      mov           bh,roundTime                                                                                  	;time
 	                      dec           curSec
 	                      cmp           curSec,bh
 	                      jz            exitLoop
 
 	;converting seconds value to string, this is a more general code for the one in sheetIII
-	                      xor           ax, ax                                                          	;will hold the value of the number to be converted to string
-	                      mov           al, curSec                                                      	;seconds are moved to al
-	                      lea           si, secondsBuffer                                               	;variable where the string will be stored
+	                      xor           ax, ax                                                                                        	;will hold the value of the number to be converted to string
+	                      mov           al, curSec                                                                                    	;seconds are moved to al
+	                      lea           si, secondsBuffer                                                                             	;variable where the string will be stored
 	;tried moving the previous three lines inside proc number2string but failed
 	                      call          number2string
 				   
 	;code for the collision timer
 	                      mov           ah, 2ch
-	                      int           21h                                                             	;seconds return in dh
+	                      int           21h                                                                                           	;seconds return in dh
 					
 					
 	                      cmp           dh, collisionCompareTemp
-	                      je            time                                                            	;keeps repeating the loop until a change has occured,
+	                      je            time                                                                                          	;keeps repeating the loop until a change has occured,
 	;now it is known that a second has actually passed
-	                      mov           collisionCompareTemp, dh                                        	; if a second has passed move this current sec to the temp variable
+	                      mov           collisionCompareTemp, dh                                                                      	; if a second has passed move this current sec to the temp variable
 	; to keep comparing with the upcoming seconds
 	               
 
 	                      mov           bh,collisionTimer
 	                      dec           curCollisionSec
-	                      cmp           curCollisionSec,bh                                              	;if the collision timer has reached zero we want to reset the timer
+	                      cmp           curCollisionSec,bh                                                                            	;if the collision timer has reached zero we want to reset the timer
 	;else keep going with the code
 	                      jnz           time
 	;if the colision timer reaches zero we will reset the timer
 
-	                      mov           curCollisionSec,4                                               	;this code block is responsible for resetting the timer
+	                      mov           curCollisionSec,4                                                                             	;this code block is responsible for resetting the timer
 	                      mov           bh,0
 	                      mov           collisionRunning,0
-
+	                      
 	time:                 
-    
+	                      cmp           isLevel1,'1'
+	                      jne           drawLevel2lbl
 	                      call          drawLevel1
+	                      jmp           enddraw
+	drawLevel2lbl:        
+	                      call          drawLevel2
+	enddraw:              
 	                      call          draw_player1
 	                      call          draw_player2
 	                      call          printTimeMid
@@ -288,7 +311,13 @@ main proc far
 	                      call          KeyClick
 	                      call          Move
 	                      call          PlayerStatus
+	                      cmp           isLevel1,'1'
+	                      jne           boundLevel2lbl
 	                      call          Level1BoundariesCheck
+	                      jmp           endcheck
+	boundLevel2lbl:       
+	                      call          Level2BoundariesCheck
+	endcheck:             
 	                      call          checkCollision
 	                      colorScreen   53
 
@@ -302,7 +331,7 @@ main proc far
 	                      mov           al,3
 	                      int           10h
 
-	                      mov           ah,2                                                            	;Move Cursor to upper middle of screen
+	                      mov           ah,2                                                                                          	;Move Cursor to upper middle of screen
 	                      mov           dx,0031d
 	                      int           10h
 
@@ -317,12 +346,62 @@ main proc far
 	                      mov           ah,9
 	                      mov           dx,offset P2winsText
 	                      int           21h
-
+	
+	
+	nameWritten:          
+	                      MOV           cx, 4CH
+	                      MOV           DX, 4B40H
+	                      MOV           AH , 86h
+	                      int           15h
+	                      jmp           start
 	;mov ax,4c00h
 	;int 21h
     
-	nameWritten:          int           20h
+
+	        
 main endp
+
+getlevel proc
+	                      mov           ax, 0eh
+	                      int           10h
+		
+	                      call          clearinputbuffer
+		
+	                      mov           ah,2                                                                                          	;Move Cursor to upper middle of screen
+	                      mov           dx,0A1Dh
+	                      int           10h
+		
+	                      mov           ah, 9
+	                      mov           dx, offset LevelString1
+	                      int           21h
+
+	                      mov           ah,2                                                                                          	;Move Cursor to lower middle of screen
+	                      mov           dx,0E1Dh
+	                      int           10h
+
+	                      mov           ah, 9                                                                                         	;Display 'press enter to continue'
+	                      mov           dx, offset SPLASH2
+	                      int           21h
+
+	                      mov           ah,2                                                                                          	;Move Cursor, to middle of screen
+	                      mov           dx,0C1Dh
+	                      int           10h
+		
+	                      mov           ah, 9
+	                      mov           dx, offset LevelString2
+	                      int           21h
+	emptylevel1:          
+	                      mov           ah,0AH                                                                                        	;Read name from keyboard
+	                      mov           dx,offset isLevel1
+	                      int           21h
+	                      cmp           isLevel1+1,0
+	                      je            emptylevel1
+						  
+	LevelTaken:           
+
+
+	                      ret
+getlevel endp
 
 getusername proc
 		
@@ -332,32 +411,32 @@ getusername proc
 		
 	                      call          clearinputbuffer
 		
-	                      mov           ah,2                                                            	;Move Cursor to upper middle of screen
+	                      mov           ah,2                                                                                          	;Move Cursor to upper middle of screen
 	                      mov           dx,0A1Dh
 	                      int           10h
 		
-	                      mov           ah, 9                                                           	;Display 'Please enter your name:'
+	                      mov           ah, 9                                                                                         	;Display 'Please enter your name:'
 	                      mov           dx, offset SPLASH1
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;Move Cursor to lower middle of screen
+	                      mov           ah,2                                                                                          	;Move Cursor to lower middle of screen
 	                      mov           dx,0E1Dh
 	                      int           10h
 
-	                      mov           ah, 9                                                           	;Display 'press enter to continue'
+	                      mov           ah, 9                                                                                         	;Display 'press enter to continue'
 	                      mov           dx, offset SPLASH2
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;Move Cursor, to middle of screen
+	                      mov           ah,2                                                                                          	;Move Cursor, to middle of screen
 	                      mov           dx,0C1Dh
 	                      int           10h
 		
-	                      mov           ah, 9                                                           	;Display 'Player 1:'
+	                      mov           ah, 9                                                                                         	;Display 'Player 1:'
 	                      mov           dx, offset NAME1
 	                      int           21h
 		
 	emptyname1:           
-	                      mov           ah,0AH                                                          	;Read name from keyboard
+	                      mov           ah,0AH                                                                                        	;Read name from keyboard
 	                      mov           dx,offset PLAYER1NAME
 	                      int           21h
 	                      cmp           player1name+1,0
@@ -365,32 +444,32 @@ getusername proc
 
 	                      call          clearinputbuffer
 		
-	                      mov           ah,2                                                            	;Move Cursor to upper middle of screen
+	                      mov           ah,2                                                                                          	;Move Cursor to upper middle of screen
 	                      mov           dx,0A1Dh
 	                      int           10h
 		
-	                      mov           ah, 9                                                           	;Display 'Please enter your name:'
+	                      mov           ah, 9                                                                                         	;Display 'Please enter your name:'
 	                      mov           dx, offset SPLASH3
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;Move Cursor to lower middle of screen
+	                      mov           ah,2                                                                                          	;Move Cursor to lower middle of screen
 	                      mov           dx,0E1Dh
 	                      int           10h
 
-	                      mov           ah, 9                                                           	;Display 'press enter to continue'
+	                      mov           ah, 9                                                                                         	;Display 'press enter to continue'
 	                      mov           dx, offset SPLASH4
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;Move Cursor, to middle of screen
+	                      mov           ah,2                                                                                          	;Move Cursor, to middle of screen
 	                      mov           dx,0C1Dh
 	                      int           10h
 		
-	                      mov           ah, 9                                                           	;Display 'Player 1:'
+	                      mov           ah, 9                                                                                         	;Display 'Player 1:'
 	                      mov           dx, offset NAME2
 	                      int           21h
 		
 	emptyname2:           
-	                      mov           ah,0AH                                                          	;Read name from keyboard
+	                      mov           ah,0AH                                                                                        	;Read name from keyboard
 	                      mov           dx,offset PLAYER2NAME
 	                      int           21h
 	                      cmp           player2name+1,0
@@ -405,7 +484,7 @@ clearinputbuffer proc
 		
 	                      mov           al,0
 	                      mov           ah,0CH
-	                      int           21h                                                             	;this clears the buffer, then moves al to ah and executes the int 21h again only if al=1,6,7,8,0AH
+	                      int           21h                                                                                           	;this clears the buffer, then moves al to ah and executes the int 21h again only if al=1,6,7,8,0AH
 
 	                      ret
 clearinputbuffer endp
@@ -421,34 +500,34 @@ mainscreenui endp
 
 writetext proc
 
-	                      mov           serving,1                                                       	;each time the user goes to the main menu, serving should be set to player 1
+	                      mov           serving,1                                                                                     	;each time the user goes to the main menu, serving should be set to player 1
 		
-	                      MOV           AH,0                                                            	;CHANGE TO GRAPHICS MODE, THIS CLEARS THE SCREEN
-	                      MOV           AL,0EH                                                          	;640x200 pixels and 80x25 text but only 16 colors, al=13h 320x200 and 256 colors
+	                      MOV           AH,0                                                                                          	;CHANGE TO GRAPHICS MODE, THIS CLEARS THE SCREEN
+	                      MOV           AL,0EH                                                                                        	;640x200 pixels and 80x25 text but only 16 colors, al=13h 320x200 and 256 colors
 	                      INT           10H
 		
 	                      mov           bh,0
-	                      mov           ah,2                                                            	;Move Cursor to upper middle of screen
+	                      mov           ah,2                                                                                          	;Move Cursor to upper middle of screen
 	                      mov           dx,0A1Ah
 	                      int           10h
 		
-	                      mov           ah, 9                                                           	;Display 'To start chatting press f1'
+	                      mov           ah, 9                                                                                         	;Display 'To start chatting press f1'
 	                      mov           dx, offset mainscreen1
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;Move Cursor to lower middle of screen
+	                      mov           ah,2                                                                                          	;Move Cursor to lower middle of screen
 	                      mov           dx,0C1Ah
 	                      int           10h
 
-	                      mov           ah, 9                                                           	;Display 'To start Pong game press F2'
+	                      mov           ah, 9                                                                                         	;Display 'To start Pong game press F2'
 	                      mov           dx, offset mainscreen2
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;Move Cursor, to middle of screen
+	                      mov           ah,2                                                                                          	;Move Cursor, to middle of screen
 	                      mov           dx,0E1Ah
 	                      int           10h
 		
-	                      mov           ah,9                                                            	;Display 'To end the program press ESC'
+	                      mov           ah,9                                                                                          	;Display 'To end the program press ESC'
 	                      mov           dx,offset mainscreen3
 	                      int           21h
 		
@@ -457,15 +536,15 @@ writetext endp
 
 showwaitmessage proc
 		
-	                      MOV           AH,0                                                            	;CHANGE TO GRAPHICS MODE, THIS CLEARS THE SCREEN
-	                      MOV           AL,0EH                                                          	;640x200 pixels and 80x25 text but only 16 colors, al=13h 320x200 and 256 colors
+	                      MOV           AH,0                                                                                          	;CHANGE TO GRAPHICS MODE, THIS CLEARS THE SCREEN
+	                      MOV           AL,0EH                                                                                        	;640x200 pixels and 80x25 text but only 16 colors, al=13h 320x200 and 256 colors
 	                      INT           10H
 		
-	                      mov           ah,2                                                            	;Move Cursor to lower middle of screen
+	                      mov           ah,2                                                                                          	;Move Cursor to lower middle of screen
 	                      mov           dx,0C0Ch
 	                      int           10h
 
-	                      mov           ah, 9                                                           	;Display 'To start Pong game press F2'
+	                      mov           ah, 9                                                                                         	;Display 'To start Pong game press F2'
 	                      mov           dx, offset MAINSCREEN7
 	                      int           21h
 		
@@ -475,8 +554,8 @@ showwaitmessage endp
 drawnotification proc
 		
 	                      mov           bh,00
-	                      mov           AH,0CH                                                          	;draw pixel int condition
-	                      mov           al,09h                                                          	;set the purple colour
+	                      mov           AH,0CH                                                                                        	;draw pixel int condition
+	                      mov           al,09h                                                                                        	;set the purple colour
 	                      mov           dx,166
 		
 	menu1:                
@@ -490,96 +569,96 @@ drawnotification proc
 	                      cmp           dx,167
 	                      jne           menu1
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1615h                                                        	;a5er el screen
+	                      mov           dx,1615h                                                                                      	;a5er el screen
 	                      int           10h
 		
 	                      mov           ah,09
 	                      mov           dx,offset PLAYER1NAME+2
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1615h                                                        	;a5er el screen
-	                      add           dl,player1name+1                                                	;add playername length
+	                      mov           dx,1615h                                                                                      	;a5er el screen
+	                      add           dl,player1name+1                                                                              	;add playername length
 	                      int           10h
 		
 	                      mov           ah,02
-	                      mov           dl, 3AH                                                         	;then write the score after adding all that
+	                      mov           dl, 3AH                                                                                       	;then write the score after adding all that
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1815h                                                        	;a5er el screen
+	                      mov           dx,1815h                                                                                      	;a5er el screen
 	                      int           10h
 		
 	                      mov           ah,09
 	                      mov           dx,offset PLAYER2NAME+2
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1815h                                                        	;a5er el screen
-	                      add           dl,player2name+1                                                	;add playername length
+	                      mov           dx,1815h                                                                                      	;a5er el screen
+	                      add           dl,player2name+1                                                                              	;add playername length
 	                      int           10h
 		
 	                      mov           ah,02
-	                      mov           dl, 3AH                                                         	;then write the score after adding all that
+	                      mov           dl, 3AH                                                                                       	;then write the score after adding all that
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1815h                                                        	;a5er el screen
-	                      add           dl,player2name+1                                                	;add playername length
+	                      mov           dx,1815h                                                                                      	;a5er el screen
+	                      add           dl,player2name+1                                                                              	;add playername length
 	                      int           10h
 		
 	                      mov           ah,02
-	                      mov           dl, 3AH                                                         	;then write the score after adding all that
+	                      mov           dl, 3AH                                                                                       	;then write the score after adding all that
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1815h                                                        	;a5er el screen
-	                      add           dl,player2name+1                                                	;add playername length
+	                      mov           dx,1815h                                                                                      	;a5er el screen
+	                      add           dl,player2name+1                                                                              	;add playername length
 	                      int           10h
 		
 	                      mov           ah,02
-	                      mov           dl, 3AH                                                         	;then write the score after adding all that
+	                      mov           dl, 3AH                                                                                       	;then write the score after adding all that
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1815h                                                        	;a5er el screen
-	                      add           dl,player2name+1                                                	;add playername length
+	                      mov           dx,1815h                                                                                      	;a5er el screen
+	                      add           dl,player2name+1                                                                              	;add playername length
 	                      int           10h
 		
 	                      mov           ah,02
-	                      mov           dl, 3AH                                                         	;then write the score after adding all that
+	                      mov           dl, 3AH                                                                                       	;then write the score after adding all that
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1815h                                                        	;a5er el screen
-	                      add           dl,player2name+1                                                	;add playername length
+	                      mov           dx,1815h                                                                                      	;a5er el screen
+	                      add           dl,player2name+1                                                                              	;add playername length
 	                      int           10h
 		
 	                      mov           ah,02
-	                      mov           dl, 3AH                                                         	;then write the score after adding all that
+	                      mov           dl, 3AH                                                                                       	;then write the score after adding all that
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1526h                                                        	;a5er el screen
+	                      mov           dx,1526h                                                                                      	;a5er el screen
 	                      int           10h
 		
 	                      mov           ah,09
 	                      mov           dx,offset MAINSCREEN4
 	                      int           21h
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1535h                                                        	;a5er el screen
+	                      mov           dx,1535h                                                                                      	;a5er el screen
 	                      int           10h
 		
 	                      mov           ah,09
@@ -593,9 +672,9 @@ drawnotification endp
 
 drawindicators proc
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1628h                                                        	;a5er el screen
+	                      mov           dx,1628h                                                                                      	;a5er el screen
 	                      int           10h
 		
 	                      cmp           readytogame,0
@@ -603,17 +682,17 @@ drawindicators proc
 	                      mov           bl,02h
 	                      jmp           d1
 	notrgame:             
-	                      mov           bl,004h                                                         	;red on black background
+	                      mov           bl,004h                                                                                       	;red on black background
 	d1:                   
-	                      mov           ah,9                                                            	;int condition
-	                      mov           bh,0                                                            	;page number
-	                      mov           al,04H                                                          	;arrow sign
-	                      mov           cx,1H                                                           	;1 time
+	                      mov           ah,9                                                                                          	;int condition
+	                      mov           bh,0                                                                                          	;page number
+	                      mov           al,04H                                                                                        	;arrow sign
+	                      mov           cx,1H                                                                                         	;1 time
 	                      int           10h
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1837h                                                        	;a5er el screen
+	                      mov           dx,1837h                                                                                      	;a5er el screen
 	                      int           10h
 		
 	                      cmp           recievedchatinv,0
@@ -621,17 +700,17 @@ drawindicators proc
 	                      mov           bl,02h
 	                      jmp           d2
 	notrecchat:           
-	                      mov           bl,004h                                                         	;red on black background
+	                      mov           bl,004h                                                                                       	;red on black background
 	d2:                   
-	                      mov           ah,9                                                            	;int condition
-	                      mov           bh,0                                                            	;page number
-	                      mov           al,04H                                                          	;arrow sign
-	                      mov           cx,1H                                                           	;1 time
+	                      mov           ah,9                                                                                          	;int condition
+	                      mov           bh,0                                                                                          	;page number
+	                      mov           al,04H                                                                                        	;arrow sign
+	                      mov           cx,1H                                                                                         	;1 time
 	                      int           10h
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1828h                                                        	;a5er el screen
+	                      mov           dx,1828h                                                                                      	;a5er el screen
 	                      int           10h
 		
 	                      cmp           recievedgameinv,0
@@ -639,17 +718,17 @@ drawindicators proc
 	                      mov           bl,02h
 	                      jmp           d3
 	notrecgame:           
-	                      mov           bl,004h                                                         	;red on black background
+	                      mov           bl,004h                                                                                       	;red on black background
 	d3:                   
-	                      mov           ah,9                                                            	;int condition
-	                      mov           bh,0                                                            	;page number
-	                      mov           al,04H                                                          	;arrow sign
-	                      mov           cx,1H                                                           	;1 time
+	                      mov           ah,9                                                                                          	;int condition
+	                      mov           bh,0                                                                                          	;page number
+	                      mov           al,04H                                                                                        	;arrow sign
+	                      mov           cx,1H                                                                                         	;1 time
 	                      int           10h
 		
-	                      mov           ah,2                                                            	;move cursor at desired destination
+	                      mov           ah,2                                                                                          	;move cursor at desired destination
 	                      mov           bh,0
-	                      mov           dx,1637h                                                        	;a5er el screen
+	                      mov           dx,1637h                                                                                      	;a5er el screen
 	                      int           10h
 		
 	                      cmp           readytochat,0
@@ -657,12 +736,12 @@ drawindicators proc
 	                      mov           bl,02h
 	                      jmp           d4
 	notrchat:             
-	                      mov           bl,004h                                                         	;red on black background
+	                      mov           bl,004h                                                                                       	;red on black background
 	d4:                   
-	                      mov           al,04H                                                          	;arrow sign
-	                      mov           ah,9                                                            	;int condition
-	                      mov           bh,0                                                            	;page number
-	                      mov           cx,1H                                                           	;1 time
+	                      mov           al,04H                                                                                        	;arrow sign
+	                      mov           ah,9                                                                                          	;int condition
+	                      mov           bh,0                                                                                          	;page number
+	                      mov           cx,1H                                                                                         	;1 time
 	                      int           10h
 		
 		
@@ -682,30 +761,39 @@ resetindicators endp
 menuinput proc
 		
 	check:                
-	                      mov           ah,1                                                            	;get key input
+	                      mov           ah,0                                                                                          	;get key input
 	                      int           16h
-	                      jz            check
 		
-	                      cmp           ah,3bh                                                          	;cmp with f1
+	                      cmp           ah,3bh                                                                                        	;cmp with f1
 	;jz f1
 	                      je            escape
 
-	                      cmp           ah,3ch                                                          	;cmp with f2
+	                      cmp           ah,3ch                                                                                        	;cmp with f2
 	                      je            f2
 		
-	                      cmp           ah,01h                                                          	;cmp with esc
+	                      cmp           ah,01h                                                                                        	;cmp with esc
 	                      je            escape
-		
-	f1:                                                                                                 	;chat mode is chosen
+
+	                      jmp           check
+	f1:                                                                                                                               	;chat mode is chosen
 	                      call          clearinputbuffer
 	;call sendchatinv
 	;call checkchatinv
 	;PUT CODE HERE TO CLEAR THE SCREEN AND CHOOSE SUITABLE VIDEO MODE FOR CHAT
 	                      ret
 		
-	f2:                                                                                                 	;game mode is chosen
+	f2:                   
+	;game mode is chosen
 	                      call          clearinputbuffer
-		
+						  
+	                      MOV           AH,0
+	;MOV AL,0EH			;this is here just to clear the screen from the text of main menu
+	                      INT           10H
+
+	                      mov           ah,0
+	                      int           16h
+						
+	                      mov           isLevel1,al
 	                      MOV           AH,0
 	;MOV AL,0EH			;this is here just to clear the screen from the text of main menu
 	                      INT           10H
@@ -716,12 +804,14 @@ menuinput proc
 	                      ret
 menuinput endp
 
+
+
 outro proc
 		
 	; call drawoutro
 	; call introsound
 		
-	                      mov           ah,0                                                            	;change to text mode
+	                      mov           ah,0                                                                                          	;change to text mode
 	                      mov           al,03h
 	                      int           10h
 		
@@ -821,7 +911,7 @@ PlayerStatus PROC
 	                      sub           CX, gravity
 	                      mov           player2_y, CX
 	                      cmp           CX, player2JumpPos
-	                      ja            player2ascend
+	                      ja            EndPlayerStatus
 	                      mov           player2JumpState, 0
 	                      mov           player2FallState, 1
 	                      ret
@@ -864,16 +954,16 @@ KeyClick ENDP
 
 SerialAction PROC
 	
-	                      CMP           AH, 72                                                          	;UP
+	                      CMP           AH, 72                                                                                        	;UP
 	                      JE            playerup
 
-	                      CMP           AH, 75                                                          	;LEFT
+	                      CMP           AH, 75                                                                                        	;LEFT
 	                      JE            playerleft
 
-	                      CMP           AH, 77                                                          	;RIGHT
+	                      CMP           AH, 77                                                                                        	;RIGHT
 	                      JE            playerright
         
-	                      cmp           AH, 80                                                          	;DOWN
+	                      cmp           AH, 80                                                                                        	;DOWN
 	                      JE            playerdown
 
 	                      RET
@@ -924,16 +1014,16 @@ SerialAction ENDP
 KeyAction PROC
 
 	;PLAYER 2 KEYS
-	                      CMP           AH, 72                                                          	;UP
+	                      CMP           AH, 72                                                                                        	;UP
 	                      JE            player2up
 
-	                      CMP           AH, 75                                                          	;LEFT
+	                      CMP           AH, 75                                                                                        	;LEFT
 	                      JE            player2left
 
-	                      CMP           AH, 77                                                          	;RIGHT
+	                      CMP           AH, 77                                                                                        	;RIGHT
 	                      JE            player2right
         
-	                      cmp           AH, 80                                                          	;DOWN
+	                      cmp           AH, 80                                                                                        	;DOWN
 	                      JE            player2down
 	;f4 key
 	                      CMP           AH,3Eh
@@ -941,16 +1031,16 @@ KeyAction PROC
 
 	;PLAYER 1 KEYS
 
-	                      CMP           AH, 11h                                                         	;w scan
+	                      CMP           AH, 11h                                                                                       	;w scan
 	                      JE            player1up
 
-	                      CMP           AH, 1eh                                                         	;LEFT a
+	                      CMP           AH, 1eh                                                                                       	;LEFT a
 	                      JE            player1left
 
-	                      CMP           AH, 20h                                                         	;RIGHT
+	                      CMP           AH, 20h                                                                                       	;RIGHT
 	                      JE            player1right
         
-	                      cmp           AH, 1fh                                                         	;DOWN
+	                      cmp           AH, 1fh                                                                                       	;DOWN
 	                      JE            player1down
 	;   CMP           AL, 77H
 	;   JE            player1up                                                       	; w
@@ -980,12 +1070,12 @@ KeyAction PROC
 	                      MOV           Y2, 1
 	                      RET
 
-	player2right:                                                                                       	;set player direction to up
-	                      MOV           X2, 1                                                           	;1 MEANS GO RIGHT
+	player2right:                                                                                                                     	;set player direction to up
+	                      MOV           X2, 1                                                                                         	;1 MEANS GO RIGHT
 	                      RET
         
 	player2left:          
-	                      MOV           X2, 2                                                           	;2 MEANS GO LEFT
+	                      MOV           X2, 2                                                                                         	;2 MEANS GO LEFT
 	                      RET
 
 	player2down:          
@@ -1027,7 +1117,7 @@ draw_player1 proc
 	                      mov           dx,player1_y
 	draw:                 
 	                      mov           ah,0ch
-	                      mov           al,06h                                                          	; color of player 1 is brown
+	                      mov           al,06h                                                                                        	; color of player 1 is brown
 	                      mov           bh,00h
 	                      int           10h
 	                      inc           cx
@@ -1062,7 +1152,7 @@ draw_player2 proc
 	                      mov           dx,player2_y
 	draw1:                
 	                      mov           ah,0ch
-	                      mov           al,09h                                                          	;color of player 2 is blue
+	                      mov           al,09h                                                                                        	;color of player 2 is blue
 	                      mov           bh,00h
 	                      int           10h
 	                      inc           cx
@@ -1097,8 +1187,8 @@ draw_player2 endp
 	;--------------------------------------------------------------------Level1 Drawing Procedures--------------------------------------------------------------------------------
 
 drawLevel1 proc
-	                      MOV           SI,0000h                                                        	;used as an iterator to reference points in Xpoints,Ypoints Pheights, Pwidths
-	                      MOV           DI,0000h                                                        	;used as an iterator with half the value of SI because colors array is a Byte not a word so we will need to iterate over half the value
+	                      MOV           SI,0000h                                                                                      	;used as an iterator to reference points in Xpoints,Ypoints Pheights, Pwidths
+	                      MOV           DI,0000h                                                                                      	;used as an iterator with half the value of SI because colors array is a Byte not a word so we will need to iterate over half the value
 	                      MOV           BX,platformsCount
 	                      ADD           BX,BX
 	DrawPlatforms:        
@@ -1111,15 +1201,31 @@ drawLevel1 proc
 	                      ret
 drawLevel1 endp
 
+drawLevel2 proc
+	                      MOV           SI, 0000h                                                                                     	;used as an iterator to reference points in Xpoints,Ypoints Pheights, Pwidths
+	                      MOV           DI, 0000h                                                                                     	;used as an iterator with half the value of SI because colors array is a Byte not a word so we will need to iterate over half the value
+	                      MOV           BX, Level2platformsCount
+	                      ADD           BX, BX
+	lvl2DrawPlatforms:    
+	              
+	                      drawRectangle Level2Xpoints[SI], Level2Ypoints[SI], Level2Pcolors[DI], Level2Pheights[SI], Level2Pwidths[SI]
+
+	                      inc           DI
+	                      add           SI,2
+	                      CMP           SI,BX
+	                      JNZ           lvl2DrawPlatforms
+				  
+	                      ret
+drawLevel2 endp
 	;================================================================================================================================================================================
 
 	;--------------------------------------------------------------------Level1 Boundaries Check-------------------------------------------------------------------------------------
 
 Level1BoundariesCheck PROC
 	;player1
-	                      cmp           player1FallState, 1                                             	;check if the character is airborne falling down
+	                      cmp           player1FallState, 1                                                                           	;check if the character is airborne falling down
 	                      jne           p1sitting
-	                      cmp           player1_y,27d                                                   	;then the following checks for the platforms minus 8
+	                      cmp           player1_y,27d                                                                                 	;then the following checks for the platforms minus 8
 	                      je            p1platform1
 	                      cmp           player1_y,62d
 	                      je            p1platform2
@@ -1134,13 +1240,13 @@ Level1BoundariesCheck PROC
 
 	                      jmp           p1RightBound
 
-	p1platform1:                                                                                        	;any middle big platform, checks if the character is in its range to stop falling down
+	p1platform1:                                                                                                                      	;any middle big platform, checks if the character is in its range to stop falling down
 	                      mov           player1FallState, 1
 	                      cmp           player1_x, 87
 	                      jb            p1RightBound
 	                      cmp           player1_x, 215
 	                      ja            p1RightBound
-	                      jmp           p1ground                                                        	;if he reached this condition then he is on the platform and should stop falling
+	                      jmp           p1ground                                                                                      	;if he reached this condition then he is on the platform and should stop falling
 
 	p1platform2:          
 	                      mov           player1FallState, 1
@@ -1260,6 +1366,147 @@ Level1BoundariesCheck PROC
 	                      ret
 Level1BoundariesCheck ENDP
 
+Level2BoundariesCheck PROC
+	;player1
+	                      cmp           player1FallState, 1
+	                      jne           l2p1sitting
+	                      cmp           player1_y,27d
+	                      je            l2p1platform1
+	                      cmp           player1_y,62d
+	                      je            l2p1platform2
+	                      cmp           player1_y,92d
+	                      je            l2p1platform1
+	                      cmp           player1_y,122d
+	                      je            l2p1platform2
+	                      cmp           player1_y,182d
+	                      je            l2p1ground
+
+	                      jmp           l2p1RightBound
+
+	l2p1platform1:        
+	                      mov           player1FallState, 1
+	                      cmp           player1_x, 87
+	                      jb            l2p1RightBound
+	                      cmp           player1_x, 215
+	                      ja            l2p1RightBound
+	                      jmp           l2p1ground
+
+	l2p1platform2:        
+	                      mov           player1FallState, 1
+	                      cmp           player1_x, 2
+	                      jb            l2p1RightBound
+	                      cmp           player1_x, 300
+	                      ja            l2p1RightBound
+	                      cmp           player1_x, 90
+	                      jb            l2p1ground
+	                      cmp           player1_x, 220
+	                      jb            l2p1RightBound
+
+	l2p1ground:           
+	                      mov           player1FallState,0h
+	                      jmp           l2p1RightBound
+	                      ret
+
+	l2p1sitting:          
+	                      cmp           player1_y,27d
+	                      je            l2p1platform1
+	                      cmp           player1_y,62d
+	                      je            l2p1platform2
+	                      cmp           player1_y,92d
+	                      je            l2p1platform1
+	                      cmp           player1_y,122d
+	                      je            l2p1platform2
+	                      cmp           player1_y,152d
+	                      je            l2p1platform1
+	                      cmp           player1_y,182d
+	                      je            l2p1ground
+
+	l2p1RightBound:       
+	                      cmp           player1_x, 312
+	                      jbe           l2p1LeftBound
+	                      mov           CX, player1_x
+	                      sub           CX, moveSpeed
+	                      mov           player1_x, CX
+    
+	l2p1LeftBound:        
+	                      cmp           player1_x, 1
+	                      jnl           l2p1UpperBound
+	                      mov           CX, player1_x
+	                      add           CX, moveSpeed
+	                      mov           player1_x, CX
+	l2p1UpperBound:       
+	;player2
+	                      cmp           player2FallState, 1
+	                      jne           l2p2sitting
+	                      cmp           player2_y,27d
+	                      je            l2p2platform1
+	                      cmp           player2_y,62d
+	                      je            l2p2platform2
+	                      cmp           player2_y,92d
+	                      je            l2p2platform1
+	                      cmp           player2_y,122d
+	                      je            l2p2platform2
+	                      cmp           player2_y,182d
+	                      je            l2p2ground
+
+	                      jmp           l2p2RightBound
+
+	l2p2platform1:        
+	                      mov           player2FallState, 1
+	                      cmp           player2_x, 87
+	                      jb            l2p2RightBound
+	                      cmp           player2_x, 215
+	                      ja            l2p2RightBound
+	                      jmp           l2p2ground
+
+	l2p2platform2:        
+	                      mov           player2FallState, 1
+	                      cmp           player2_x, 2
+	                      jb            l2p2RightBound
+	                      cmp           player2_x, 300
+	                      ja            l2p2RightBound
+	                      cmp           player2_x, 90
+	                      jb            l2p2ground
+	                      cmp           player2_x, 220
+	                      jb            l2p2RightBound
+
+	l2p2ground:           
+	                      mov           player2FallState,0h
+	                      jmp           l2p2RightBound
+	                      ret
+
+	l2p2sitting:          
+	                      cmp           player2_y,27d
+	                      je            l2p2platform1
+	                      cmp           player2_y,62d
+	                      je            l2p2platform2
+	                      cmp           player2_y,92d
+	                      je            l2p2platform1
+	                      cmp           player2_y,122d
+	                      je            l2p2platform2
+	                      cmp           player2_y,152d
+	                      je            l2p2platform1
+	                      cmp           player2_y,182d
+	                      je            l2p2ground
+
+	l2p2RightBound:       
+	                      cmp           player2_x, 312
+	                      jbe           l2p2LeftBound
+	                      mov           CX, player2_x
+	                      sub           CX, moveSpeed
+	                      mov           player2_x, CX
+
+	l2p2LeftBound:        
+	                      cmp           player2_x, 1
+	                      jnl           l2p2UpperBound
+	                      mov           CX, player2_x
+	                      add           CX, moveSpeed
+	                      mov           player2_x, CX
+
+	l2p2UpperBound:       
+	                      ret
+Level2BoundariesCheck ENDP
+
 	;====================================================================================================================================================================================
 
 	;-------------------------------------------------------------------------Timers--------------------------------------------------------------------------------------------
@@ -1295,26 +1542,26 @@ printTimeMid endp
 
 	;this proc is a more generalized code for the exercise in sheet3 where we output an integer as a string
 	;original code and idea is credited to https://stackoverflow.com/questions/44374434/display-timer-on-screen-in-assembly-masm-8086
-number2string proc                                                                                  		;time conversion to string not that important
+number2string proc                                                                                                                		;time conversion to string not that important
 
 	;FILL BUF WITH DOLLARS.
 	                      push          si
 	                      call          dollars
 	                      pop           si
 
-	                      mov           bx, 10                                                          	;DIGITS ARE EXTRACTED DIVIDING BY 10.
-	                      mov           cx, 0                                                           	;COUNTER FOR EXTRACTED DIGITS.
+	                      mov           bx, 10                                                                                        	;DIGITS ARE EXTRACTED DIVIDING BY 10.
+	                      mov           cx, 0                                                                                         	;COUNTER FOR EXTRACTED DIGITS.
 	cycle1:               
-	                      mov           dx, 0                                                           	;NECESSARY TO DIVIDE BY BX.
-	                      div           bx                                                              	;DX:AX / 10 = AX:QUOTIENT DX:REMAINDER.
-	                      push          dx                                                              	;PRESERVE DIGIT EXTRACTED FOR LATER.
-	                      inc           cx                                                              	;INCREASE COUNTER FOR EVERY DIGIT EXTRACTED.
-	                      cmp           ax, 0                                                           	;IF NUMBER IS
-	                      jne           cycle1                                                          	;NOT ZERO, LOOP.
+	                      mov           dx, 0                                                                                         	;NECESSARY TO DIVIDE BY BX.
+	                      div           bx                                                                                            	;DX:AX / 10 = AX:QUOTIENT DX:REMAINDER.
+	                      push          dx                                                                                            	;PRESERVE DIGIT EXTRACTED FOR LATER.
+	                      inc           cx                                                                                            	;INCREASE COUNTER FOR EVERY DIGIT EXTRACTED.
+	                      cmp           ax, 0                                                                                         	;IF NUMBER IS
+	                      jne           cycle1                                                                                        	;NOT ZERO, LOOP.
 	;NOW RETRIEVE PUSHED DIGITS.
 	cycle2:               
 	                      pop           dx
-	                      add           dl, 48                                                          	;CONVERT DIGIT TO CHARACTER.
+	                      add           dl, 48                                                                                        	;CONVERT DIGIT TO CHARACTER.
 	                      mov           [si], dl
 	                      inc           si
 	                      loop          cycle2
@@ -1328,12 +1575,12 @@ checkCollision proc
 	                      mov           ax, player1_x
 	                      add           ax, player_size
 	                      cmp           ax, player2_x
-	                      JNG           exit                                                            	;first condition not satisified, no need to check anymore.
+	                      JNG           exit                                                                                          	;first condition not satisified, no need to check anymore.
 
 	                      mov           ax, player2_x
 	                      add           ax, player_size
 	                      cmp           ax, player1_x
-	                      JNG           exit                                                            	;second condition
+	                      JNG           exit                                                                                          	;second condition
 
 	                      mov           ax, player1_y
 	                      add           ax, player_size
@@ -1345,7 +1592,7 @@ checkCollision proc
 	                      cmp           ax, player1_y
 	                      JNG           exit
 
-	                      cmp           collisionRunning,1                                              	;if the collision timer is already running keep the tag as it is
+	                      cmp           collisionRunning,1                                                                            	;if the collision timer is already running keep the tag as it is
 	                      jz            exit
 				   
 	                      mov           collisionRunning,1
@@ -1380,11 +1627,11 @@ writePlayerNames proc
 	                      int           10h
 	                      mov           al,[SI]
 	                      cmp           al,13
-	                      je            player2cursor                                                   	;checks if the current char is a dollar sign, if not continue printing the name
+	                      je            player2cursor                                                                                 	;checks if the current char is a dollar sign, if not continue printing the name
 
 	                      mov           ah, 9
 	                      mov           bh, 0
-	                      mov           bl, 06h                                                         	;brown
+	                      mov           bl, 06h                                                                                       	;brown
 	                      mov           cx, 1
 	                      int           10h
 	                      add           SI,1
@@ -1407,7 +1654,7 @@ writePlayerNames proc
 	                      je            done
 	                      mov           ah, 9
 	                      mov           bh, 0
-	                      mov           bl, 09h                                                         	;blue
+	                      mov           bl, 09h                                                                                       	;blue
 	                      mov           cx, 1
 	                      int           10h
 	                      add           SI,1

@@ -73,6 +73,7 @@ ENDM Initialize
 .model small
 .stack 64
 .data
+	isLevel1             DB ?
 
 	isPlayer1 db 1
     player1_x dw 00d    ;initial x coordinate for player 1
@@ -88,7 +89,7 @@ ENDM Initialize
     X2 db 0             ;current x coordinate of player 2
     Y2 db 2             ;current y coordinate of player 2
 
-	moveSpeed            dw 8d
+	moveSpeed            dw 6d
 	gravity              dw 5d
 
 	player1JumpState     db 0
@@ -108,6 +109,19 @@ ENDM Initialize
 	Pcolors              DB 10,200,200,200,200,200,200,200
 	Pwidths              DW 320,120,80,80,120,80,80,120
 	Pheights             DW 10,3,3,3,3,3,3,3
+
+	Level2platformsCount DW 9                                                    	;a variable to include the number of platforms in order to use in loops to reference in macros
+
+	; the following arrays contain the x,y,color,width,and height of all platforms
+	; the number of elements in each array is platformsCount
+	Level2Xpoints        DW 0, 80, 230, 10, 220, 95, 10, 220, 95
+	Level2Ypoints        DW 190, 160, 160, 130, 130, 100, 70, 70, 30
+	Level2Pcolors        DB 10, 200, 200, 200, 200, 200, 200, 200, 200
+	Level2Pwidths        DW 320, 10, 10, 80, 80, 120, 80, 80, 120
+	Level2Pheights       DW 10, 29, 29, 3, 3, 3, 3, 3, 3
+	Level2Velocities     DW 0, 0, 0, 1, 1, 0, 2, 2, 0
+	Level2previousTime   db ?
+	Level2testVelocity   dw 5
 
 	tag                  db 0
 	p1_tag_x             dw 3d
@@ -191,7 +205,10 @@ ENDM Initialize
     CHATEXIT			DB		'TO EXIT CHAT PRESS EXIT$'
     ;--------------------------------------------------------------------------------------;
 
+;----------------------------Level strings------------------------------------------------;
 
+	LevelString1         DB 'Please choose Level 1 or 2$'
+	LevelString2         DB 'Level:$'
 
                                                     ;the includes are here so that they can work with the datasegment
     ;INCLUDE GUI.INC									;contains some general purpose functions that could be used
@@ -272,7 +289,13 @@ main proc far
 	                      mov           collisionRunning,0
 	time:                 
     
+	                      cmp           isLevel1,'1'
+	                      jne           drawLevel2lbl
 	                      call          drawLevel1
+	                      jmp           enddraw
+	drawLevel2lbl:        
+	                      call          drawLevel2
+	enddraw:              
 	                      call          draw_player1
 	                      call          draw_player2
 	                      call          printTimeMid
@@ -287,7 +310,13 @@ main proc far
 	                      call          KeyClick
 	                      call          Move
 	                      call          PlayerStatus
+	                      cmp           isLevel1,'1'
+	                      jne           boundLevel2lbl
 	                      call          Level1BoundariesCheck
+	                      jmp           endcheck
+	boundLevel2lbl:       
+	                      call          Level2BoundariesCheck
+	endcheck:             
 	                      call          checkCollision
 	                      colorScreen   80        
 	                      jmp           display_time
@@ -302,6 +331,10 @@ main proc far
         mov ah,2          		;Move Cursor to upper middle of screen
 		mov dx,0031d     		
 		int 10h 
+
+		mov           ah,2                                                                                          	;Move Cursor to upper middle of screen
+	                      mov           dx,0031d
+	                      int           10h
 
 	                      cmp           tag,0
 	                      je            player2win
@@ -318,7 +351,11 @@ main proc far
 	;mov ax,4c00h
 	;int 21h
     
-	nameWritten:          int           20h
+	nameWritten:          MOV           cx, 4CH
+	                      MOV           DX, 4B40H
+	                      MOV           AH , 86h
+	                      int           15h
+	                      jmp           start
 main endp
 
 initializeUART proc
@@ -343,6 +380,48 @@ initializeUART proc
 	               out  dx,al
 	               ret
 initializeUART ENDP
+
+getlevel proc
+	                      mov           ax, 0eh
+	                      int           10h
+		
+	                      call          clearinputbuffer
+		
+	                      mov           ah,2                                                                                          	;Move Cursor to upper middle of screen
+	                      mov           dx,0A1Dh
+	                      int           10h
+		
+	                      mov           ah, 9
+	                      mov           dx, offset LevelString1
+	                      int           21h
+
+	                      mov           ah,2                                                                                          	;Move Cursor to lower middle of screen
+	                      mov           dx,0E1Dh
+	                      int           10h
+
+	                      mov           ah, 9                                                                                         	;Display 'press enter to continue'
+	                      mov           dx, offset SPLASH2
+	                      int           21h
+
+	                      mov           ah,2                                                                                          	;Move Cursor, to middle of screen
+	                      mov           dx,0C1Dh
+	                      int           10h
+		
+	                      mov           ah, 9
+	                      mov           dx, offset LevelString2
+	                      int           21h
+	emptylevel1:          
+	                      mov           ah,0AH                                                                                        	;Read name from keyboard
+	                      mov           dx,offset isLevel1
+	                      int           21h
+	                      cmp           isLevel1+1,0
+	                      je            emptylevel1
+						  
+	LevelTaken:           
+
+
+	                      ret
+getlevel endp
 
 getusername proc
 		
@@ -702,9 +781,8 @@ resetindicators endp
 menuinput proc
 		
 	check:                
-	                      mov           ah,1                                                            	;get key input
+	                      mov           ah,0                                                            	;get key input
 	                      int           16h
-	                      jz            check
 		
 	                      cmp           ah,3bh                                                          	;cmp with f1
 	;jz f1
@@ -715,7 +793,8 @@ menuinput proc
 		
 	                      cmp           ah,01h                                                          	;cmp with esc
 	                      je            escape
-		
+						
+	                      jmp           check
 	f1:                                                                                                 	;chat mode is chosen
 	                      call          clearinputbuffer
 	;call sendchatinv
@@ -726,6 +805,13 @@ menuinput proc
 	f2:                                                                                                 	;game mode is chosen
 	                      call          clearinputbuffer
 		
+	                      MOV           AH,0
+	;MOV AL,0EH			;this is here just to clear the screen from the text of main menu
+	                      INT           10H
+						  mov           ah,0
+	                      int           16h
+						
+	                      mov           isLevel1,al
 	                      MOV           AH,0
 	;MOV AL,0EH			;this is here just to clear the screen from the text of main menu
 	                      INT           10H
@@ -841,7 +927,7 @@ PlayerStatus PROC
 	                      sub           CX, gravity
 	                      mov           player2_y, CX
 	                      cmp           CX, player2JumpPos
-	                      ja            player2ascend
+	                      ja            EndPlayerStatus
 	                      mov           player2JumpState, 0
 	                      mov           player2FallState, 1
 	                      ret
@@ -1209,6 +1295,22 @@ drawLevel1 proc
 	                      ret
 drawLevel1 endp
 
+drawLevel2 proc
+	                      MOV           SI, 0000h                                                                                     	;used as an iterator to reference points in Xpoints,Ypoints Pheights, Pwidths
+	                      MOV           DI, 0000h                                                                                     	;used as an iterator with half the value of SI because colors array is a Byte not a word so we will need to iterate over half the value
+	                      MOV           BX, Level2platformsCount
+	                      ADD           BX, BX
+	lvl2DrawPlatforms:    
+	              
+	                      drawRectangle Level2Xpoints[SI], Level2Ypoints[SI], Level2Pcolors[DI], Level2Pheights[SI], Level2Pwidths[SI]
+
+	                      inc           DI
+	                      add           SI,2
+	                      CMP           SI,BX
+	                      JNZ           lvl2DrawPlatforms
+				  
+	                      ret
+drawLevel2 endp
 	;================================================================================================================================================================================
 
 	;--------------------------------------------------------------------Level1 Boundaries Check-------------------------------------------------------------------------------------
@@ -1357,6 +1459,147 @@ Level1BoundariesCheck PROC
 	p2UpperBound:         
 	                      ret
 Level1BoundariesCheck ENDP
+
+Level2BoundariesCheck PROC
+	;player1
+	                      cmp           player1FallState, 1
+	                      jne           l2p1sitting
+	                      cmp           player1_y,27d
+	                      je            l2p1platform1
+	                      cmp           player1_y,62d
+	                      je            l2p1platform2
+	                      cmp           player1_y,92d
+	                      je            l2p1platform1
+	                      cmp           player1_y,122d
+	                      je            l2p1platform2
+	                      cmp           player1_y,182d
+	                      je            l2p1ground
+
+	                      jmp           l2p1RightBound
+
+	l2p1platform1:        
+	                      mov           player1FallState, 1
+	                      cmp           player1_x, 87
+	                      jb            l2p1RightBound
+	                      cmp           player1_x, 215
+	                      ja            l2p1RightBound
+	                      jmp           l2p1ground
+
+	l2p1platform2:        
+	                      mov           player1FallState, 1
+	                      cmp           player1_x, 2
+	                      jb            l2p1RightBound
+	                      cmp           player1_x, 300
+	                      ja            l2p1RightBound
+	                      cmp           player1_x, 90
+	                      jb            l2p1ground
+	                      cmp           player1_x, 220
+	                      jb            l2p1RightBound
+
+	l2p1ground:           
+	                      mov           player1FallState,0h
+	                      jmp           l2p1RightBound
+	                      ret
+
+	l2p1sitting:          
+	                      cmp           player1_y,27d
+	                      je            l2p1platform1
+	                      cmp           player1_y,62d
+	                      je            l2p1platform2
+	                      cmp           player1_y,92d
+	                      je            l2p1platform1
+	                      cmp           player1_y,122d
+	                      je            l2p1platform2
+	                      cmp           player1_y,152d
+	                      je            l2p1platform1
+	                      cmp           player1_y,182d
+	                      je            l2p1ground
+
+	l2p1RightBound:       
+	                      cmp           player1_x, 312
+	                      jbe           l2p1LeftBound
+	                      mov           CX, player1_x
+	                      sub           CX, moveSpeed
+	                      mov           player1_x, CX
+    
+	l2p1LeftBound:        
+	                      cmp           player1_x, 1
+	                      jnl           l2p1UpperBound
+	                      mov           CX, player1_x
+	                      add           CX, moveSpeed
+	                      mov           player1_x, CX
+	l2p1UpperBound:       
+	;player2
+	                      cmp           player2FallState, 1
+	                      jne           l2p2sitting
+	                      cmp           player2_y,27d
+	                      je            l2p2platform1
+	                      cmp           player2_y,62d
+	                      je            l2p2platform2
+	                      cmp           player2_y,92d
+	                      je            l2p2platform1
+	                      cmp           player2_y,122d
+	                      je            l2p2platform2
+	                      cmp           player2_y,182d
+	                      je            l2p2ground
+
+	                      jmp           l2p2RightBound
+
+	l2p2platform1:        
+	                      mov           player2FallState, 1
+	                      cmp           player2_x, 87
+	                      jb            l2p2RightBound
+	                      cmp           player2_x, 215
+	                      ja            l2p2RightBound
+	                      jmp           l2p2ground
+
+	l2p2platform2:        
+	                      mov           player2FallState, 1
+	                      cmp           player2_x, 2
+	                      jb            l2p2RightBound
+	                      cmp           player2_x, 300
+	                      ja            l2p2RightBound
+	                      cmp           player2_x, 90
+	                      jb            l2p2ground
+	                      cmp           player2_x, 220
+	                      jb            l2p2RightBound
+
+	l2p2ground:           
+	                      mov           player2FallState,0h
+	                      jmp           l2p2RightBound
+	                      ret
+
+	l2p2sitting:          
+	                      cmp           player2_y,27d
+	                      je            l2p2platform1
+	                      cmp           player2_y,62d
+	                      je            l2p2platform2
+	                      cmp           player2_y,92d
+	                      je            l2p2platform1
+	                      cmp           player2_y,122d
+	                      je            l2p2platform2
+	                      cmp           player2_y,152d
+	                      je            l2p2platform1
+	                      cmp           player2_y,182d
+	                      je            l2p2ground
+
+	l2p2RightBound:       
+	                      cmp           player2_x, 312
+	                      jbe           l2p2LeftBound
+	                      mov           CX, player2_x
+	                      sub           CX, moveSpeed
+	                      mov           player2_x, CX
+
+	l2p2LeftBound:        
+	                      cmp           player2_x, 1
+	                      jnl           l2p2UpperBound
+	                      mov           CX, player2_x
+	                      add           CX, moveSpeed
+	                      mov           player2_x, CX
+
+	l2p2UpperBound:       
+	                      ret
+Level2BoundariesCheck ENDP
 
 	;====================================================================================================================================================================================
 
