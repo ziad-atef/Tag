@@ -64,16 +64,16 @@ ENDM checkDifference
 .model small
 .stack 64
 .data
-	platformsCount DW 8                         	;a variable to include the number of platforms in order to use in loops to reference in macros
+	platformsCount  DW 8                              	;a variable to include the number of platforms in order to use in loops to reference in macros
 
 	; the following arrays contain the x,y,color,width,and height of all platforms
 	; the number of elements in each array is platformsCount
-    ;[0] is the ground
-	Xpoints        DW 0,150,20,440,150,20,440,150
-	Ypoints        DW 315,270,220,220,160,100,100,50
-	Pcolors        DB 10,8,8,8,8,8,8,8
-	Pwidths        DW 640,300,150,150,300,150,150,300
-	Pheights       DW 20,5,5,5,5,5,5,5
+	;[0] is the ground
+	Xpoints         DW 0,140,20,460,140,20,460,140
+	Ypoints         DW 315,270,220,220,160,100,100,50
+	Pcolors         DB 10,8,8,8,8,8,8,8
+	Pwidths         DW 640,360,160,160,360,160,160,360
+	Pheights        DW 20,5,5,5,5,5,5,5
 
 	; Xpoints        DW 0,95,10,220,95,10,220,95
 	; Ypoints        DW 315,160,130,130,100,70,70,35
@@ -82,133 +82,133 @@ ENDM checkDifference
 	; Pheights       DW 20,3,3,3,3,3,3,3
 
     
-    secondToCompare db ?            ; a variable which hols the current second at any moment,
-                                    ; this is used in order to detect if a second has actually passed or not    
-    secondsBuffer   db 6 dup (?)    ; an array to hold the ascii code of seconds to be printed
-    curSec  db 61                   ;a variable that has the current value to be printed 
-    roundTime db -1                ;sets the time the user wants to end the round at
+	secondToCompare db ?                              	; a variable which hols the current second at any moment,
+	; this is used in order to detect if a second has actually passed or not
+	secondsBuffer   db 6 dup (?)                      	; an array to hold the ascii code of seconds to be printed
+	curSec          db 61                             	;a variable that has the current value to be printed
+	roundTime       db -1                             	;sets the time the user wants to end the round at
 
 
 
 .code
 main proc far
-	              mov          ax,@data
-	              mov          ds,ax
+	               mov          ax,@data
+	               mov          ds,ax
 
-	              graphicsMode 12h        	;Graphics mode 320x200 , 10 makes the game screen small and changes color
+	               graphicsMode 12h                                                             	;Graphics mode 320x200 , 10 makes the game screen small and changes color
 	              
-	              colorScreen  3
+	               colorScreen  3
 
 
-                display_time:    
-                call         drawLevel1
+	display_time:  
+	               call         drawLevel1
 
 
-                ;gets the current system time
-                mov  ah, 2ch
-                int  21h       ;seconds return in dh
+	;gets the current system time
+	               mov          ah, 2ch
+	               int          21h                                                             	;seconds return in dh
                 
                 
-                ;TIMER (1 SECOND).  
-                cmp  dh, secondToCompare
-                je   display_time  ;keeps repeating the loop until a change has occured, now it is known that a second has actually passed
-                mov  secondToCompare, dh
+	;TIMER (1 SECOND).
+	               cmp          dh, secondToCompare
+	               je           display_time                                                    	;keeps repeating the loop until a change has occured, now it is known that a second has actually passed
+	               mov          secondToCompare, dh
 
-                ; bh will be used as a temp reg for round time if rount time is reached the loop stops
-                mov bh,roundTime
-                sub curSec,1
-                cmp curSec,bh
-                jz exitLoop
-                ;mov bh, curSec
+	; bh will be used as a temp reg for round time if rount time is reached the loop stops
+	               mov          bh,roundTime
+	               sub          curSec,1
+	               cmp          curSec,bh
+	               jz           exitLoop
+	;mov bh, curSec
 
-                ;converting seconds value to string, this is a more general code for the one in sheetIII  
-                xor  ax, ax  ;will hold the value of the number to be converted to string
-                mov  al, curSec  ;seconds are moved to al
-                lea  si, secondsBuffer  ;variable where the string will be stored
-                call number2string  
+	;converting seconds value to string, this is a more general code for the one in sheetIII
+	               xor          ax, ax                                                          	;will hold the value of the number to be converted to string
+	               mov          al, curSec                                                      	;seconds are moved to al
+	               lea          si, secondsBuffer                                               	;variable where the string will be stored
+	               call         number2string
 
-               call displayTimeMid
+	               call         displayTimeMid
 
-                ;keep repeating the loop
-                jmp  display_time
+	;keep repeating the loop
+	               jmp          display_time
 
-                exitLoop:  
-                 int          20h
+	exitLoop:      
+	               int          20h
 
 				  
 main endp
 	;Procedures go here.
 
 drawLevel1 proc
-	              MOV          SI,0000h                                                        	;used as an iterator to reference points in Xpoints,Ypoints Pheights, Pwidths
-	              MOV          DI,0000h                                                        	;used as an iterator with half the value of SI because colors array is a Byte not a word so we will need to iterate over half the value
-	              MOV          BX,platformsCount
-	              ADD          BX,BX
-	DrawPlatforms:
-	              drawPlatform Xpoints[SI], Ypoints[SI], Pcolors[DI], Pheights[SI], Pwidths[SI]
-	              inc          DI
-	              add          SI,2
-	              CMP          SI,BX
-	              JNZ          DrawPlatforms
+	               MOV          SI,0000h                                                        	;used as an iterator to reference points in Xpoints,Ypoints Pheights, Pwidths
+	               MOV          DI,0000h                                                        	;used as an iterator with half the value of SI because colors array is a Byte not a word so we will need to iterate over half the value
+	               MOV          BX,platformsCount
+	               ADD          BX,BX
+	DrawPlatforms: 
+	               drawPlatform Xpoints[SI], Ypoints[SI], Pcolors[DI], Pheights[SI], Pwidths[SI]
+	               inc          DI
+	               add          SI,2
+	               CMP          SI,BX
+	               JNZ          DrawPlatforms
 
-	              ret
+	               ret
 drawLevel1 endp
 
-number2string proc near  
-;FILL BUF WITH DOLLARS.
-  push si
-  call dollars
-  pop  si
+number2string proc near
+	;FILL BUF WITH DOLLARS.
+	               push         si
+	               call         dollars
+	               pop          si
 
-  mov  bx, 10 ;DIGITS ARE EXTRACTED DIVIDING BY 10.
-  mov  cx, 0 ;COUNTER FOR EXTRACTED DIGITS.
-cycle1:       
-  mov  dx, 0 ;NECESSARY TO DIVIDE BY BX.
-  div  bx ;DX:AX / 10 = AX:QUOTIENT DX:REMAINDER.
-  push dx ;PRESERVE DIGIT EXTRACTED FOR LATER.
-  inc  cx ;INCREASE COUNTER FOR EVERY DIGIT EXTRACTED.
-  cmp  ax, 0  ;IF NUMBER IS
-  jne  cycle1 ;NOT ZERO, LOOP. 
-;NOW RETRIEVE PUSHED DIGITS.
-cycle2:  
-  pop  dx        
-  add  dl, 48 ;CONVERT DIGIT TO CHARACTER.
-  mov  [ si ], dl
-  inc  si
-  loop cycle2  
+	               mov          bx, 10                                                          	;DIGITS ARE EXTRACTED DIVIDING BY 10.
+	               mov          cx, 0                                                           	;COUNTER FOR EXTRACTED DIGITS.
+	cycle1:        
+	               mov          dx, 0                                                           	;NECESSARY TO DIVIDE BY BX.
+	               div          bx                                                              	;DX:AX / 10 = AX:QUOTIENT DX:REMAINDER.
+	               push         dx                                                              	;PRESERVE DIGIT EXTRACTED FOR LATER.
+	               inc          cx                                                              	;INCREASE COUNTER FOR EVERY DIGIT EXTRACTED.
+	               cmp          ax, 0                                                           	;IF NUMBER IS
+	               jne          cycle1                                                          	;NOT ZERO, LOOP.
+	;NOW RETRIEVE PUSHED DIGITS.
+	cycle2:        
+	               pop          dx
+	               add          dl, 48                                                          	;CONVERT DIGIT TO CHARACTER.
+	               mov          [ si ], dl
+	               inc          si
+	               loop         cycle2
 
-  ret
+	               ret
 number2string endp
 
-;------------------------------------------
-;FILLS VARIABLE WITH '$'.
-;USED BEFORE CONVERT NUMBERS TO STRING, BECAUSE
-;THE STRING WILL BE DISPLAYED.
-;PARAMETER : SI = POINTING TO STRING TO FILL.
+	;------------------------------------------
+	;FILLS VARIABLE WITH '$'.
+	;USED BEFORE CONVERT NUMBERS TO STRING, BECAUSE
+	;THE STRING WILL BE DISPLAYED.
+	;PARAMETER : SI = POINTING TO STRING TO FILL.
 
-dollars proc near                
-  mov  cx, 6
-six_dollars:      
-  mov  bl, '$'
-  mov  [ si ], bl
-  inc  si
-  loop six_dollars
+dollars proc near
+	               mov          cx, 6
+	six_dollars:   
+	               mov          bl, '$'
+	               mov          [ si ], bl
+	               inc          si
+	               loop         six_dollars
 
-  ret
-dollars endp  
+	               ret
+dollars endp
 
 displayTimeMid proc
-     ;move cursor to top middle of the screen
-                mov ah,2
-                mov dx,0025h
-                int 10h
+	;move cursor to top middle of the screen
+	               mov          ah,2
+	               mov          dx,0027h
+	               int          10h
                 
-                ; display string
-                mov  ah, 9
-                lea  dx, secondsBuffer
-                int  21h
-                ret
+	; display string
+	               mov          ah, 9
+	               lea          dx, secondsBuffer
+	               int          21h
+	               ret
 displayTimeMid endp
 
 
-end main      
+end main
